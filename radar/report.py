@@ -135,6 +135,14 @@ def _review_lines(cfg: dict, rev: dict, summ: dict) -> list[str]:
     return lines
 
 
+def _feishu_lines(extra: dict[str, dict]) -> list[str]:
+    fs = extra.get("feishu", {"skipped": True})
+    if fs.get("skipped"):
+        return []
+    state = fs.get("error") or t("st_feishu_ok", sent=fs["sent"], pending=fs["pending"])
+    return [t("st_feishu", state=state)]
+
+
 def _status_lines(b: dict[str, dict], extra: dict[str, dict]) -> list[str]:
     x, hf, bo, sm = b["x"], b["hf"], b["breakout"], b["sitemap"]
     lines = ["", t("status_h"), ""]
@@ -156,6 +164,7 @@ def _status_lines(b: dict[str, dict], extra: dict[str, dict]) -> list[str]:
     for key, label in (("judge", "st_judge"), ("record", "st_record")):
         if extra.get(key, {}).get("error"):
             lines.append(t(label, state=extra[key]["error"]))
+    lines += _feishu_lines(extra)
     return lines
 
 
@@ -285,4 +294,5 @@ def sources(cfg: dict, lead: list[dict], b: dict[str, dict], extra: dict[str, di
         if extra.get(key, {}).get("error"):
             lines.append(t(label, state=extra[key]["error"]))
     lines.append(t("cost", cost=_cost(b["x"])))
+    lines += _feishu_lines(extra)
     return "\n".join(lines) + "\n"

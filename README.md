@@ -214,6 +214,13 @@ add the `AISA_API_KEY` repository secret and set the workflow's `PAID_ENABLED` t
 skipped, and email delivery is not enabled. Pause via Actions > New-term radar >
 Disable workflow. See [the setup guide (Chinese)](docs/GITHUB.zh-CN.md).
 
+Feishu notifications: add the `FEISHU_WEBHOOK_URL` repository secret and, when bot
+signature verification is enabled, `FEISHU_SECRET`. Both jobs notify only on new
+candidate terms, with report links. A persistent outbox deduplicates successful
+deliveries and retries failed ones on the next run. Reports are still generated on
+notification failure, but the run fails visibly. Select `test_feishu` in Run workflow
+to send only one connection test. See [the Feishu guide (Chinese)](docs/FEISHU.zh-CN.md).
+
 ## How the pieces decide
 
 - **Names in posts** (`radar/terms.py`): capitalised words, words with a digit (`Qwen3.8`) or inner capitals (`HyperFrames`); a number after a name joins it (`Opus 5.5`). A name two accounts used counts; a name one account used needs 100 likes and must be unmistakably a name, since a capitalised word is often just the start of a sentence.

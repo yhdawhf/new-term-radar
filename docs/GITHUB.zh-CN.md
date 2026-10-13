@@ -23,6 +23,8 @@ GitHub 定时触发可能延后，时间不是准点保证。云端进程使用 
 
 这次配置没有启用邮件发送。报告在 GitHub 查看，不依赖 Mac 开机。
 
+飞书消息可通过仓库 Secrets 启用：`FEISHU_WEBHOOK_URL` 和可选 `FEISHU_SECRET`。sources/daily 只推送新的候选词，失败队列随状态缓存保留。Run workflow 的 `test_feishu` 选项只发送连接测试。见 [飞书推送说明](FEISHU.zh-CN.md)。
+
 ## 状态延续
 
 sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历史。每轮缓存键包含 run ID 和 attempt，失败重跑也能保存新状态。缓存失效时，下一轮重新建立基线，历史可能中断；运行附件还提供完整状态备份，保留 30 天。

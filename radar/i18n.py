@@ -65,6 +65,8 @@ T = {
     "st_sitemaps": ("- ③ sitemaps: {state}", "- ③ 竞品:{state}"),
     "st_record": ("- saving leads: {state}", "- 记录候选词:{state}"),
     "st_judge": ("- name judge: {state}", "- 名字判断:{state}"),
+    "st_feishu": ("- Feishu notifications: {state}", "- 飞书推送:{state}"),
+    "st_feishu_ok": ("{sent} new leads sent, {pending} pending", "已推送 {sent} 个新词，待发送 {pending} 个"),
     "cost": ("- AIsa data spend this run: {cost} (the name judge's tokens are billed apart)", "- 本次 AIsa 数据花费:{cost}(名字判断的模型调用另计)"),
     # the generic terms behind the names
     "kind_usecase": ("generic term", "通用词"),

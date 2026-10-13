@@ -198,6 +198,8 @@ python scripts/gsc_auth.py gsc_client.json   # 打开一次浏览器授权，写
 
 付费功能明确关闭，添加 Key 本身不会产生付费调用。以后启用时，在仓库 Secrets 添加 `AISA_API_KEY`，并把工作流的 `PAID_ENABLED` 改为 `"true"`；`GOANYAPI_API_KEY` 和 `GSC_TOKEN_JSON` 可选。新站接口继续跳过，邮件发送未启用。暂停运行可在 Actions 的 New-term radar 菜单中选择 Disable workflow。
 
+飞书新词推送：添加仓库 Secret `FEISHU_WEBHOOK_URL`，签名校验开启时再加 `FEISHU_SECRET`。sources 和 daily 会自动推送新候选词及报告链接；没有新词不发消息，同一个词成功发送后不重复推送。失败保留待发队列，在下次任务中重试；报告仍生成，推送失败会让任务显示失败。在 Run workflow 勾选 `test_feishu` 可仅发送一条连接测试。详见 [飞书配置](docs/FEISHU.zh-CN.md)。
+
 详细说明见 [GitHub 运行配置](docs/GITHUB.zh-CN.md)。
 
 ## 各部分怎么判断

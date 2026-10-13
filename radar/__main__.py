@@ -29,7 +29,7 @@ import time
 from datetime import date
 from pathlib import Path
 
-from . import breakout, config, gsc, new_sites, notify, report, review, sitemaps, sources, store, usecases
+from . import breakout, config, feishu, gsc, new_sites, notify, report, review, sitemaps, sources, store, usecases
 from .i18n import t
 from .diagnostics import configure, log, result
 
@@ -81,12 +81,13 @@ def cmd_sources(args, cfg: dict, state: Path) -> int:
     lead, judged = _leads(cfg, blocks)
     conn = store.connect(state)
     extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}, label="SQLite 入库")}
+    extra["feishu"] = run(lambda: feishu.notify(state, report.to_record(cfg, lead)), label="飞书新词推送")
     errors = any(b.get("error") for b in (*blocks.values(), *extra.values()))
-    if report.named(cfg, lead) or errors:
+    if report.named(cfg, lead) or errors or extra["feishu"].get("sent"):
         _finish(args, report.sources(cfg, lead, blocks, extra), f"New-term radar · sources {date.today()}")
     else:
         print(t("sources_quiet") + "; ".join(f"{k} {v.get('posts', v.get('models', t('dash')))}" for k, v in blocks.items()))
-    return 0
+    return 1 if extra["feishu"].get("error") else 0
 
 
 def cmd_daily(args, cfg: dict, state: Path) -> int:
@@ -103,6 +104,7 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     lead, judged = _leads(cfg, blocks)
     conn = store.connect(state)
     extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}, label="SQLite 入库")}
+    extra["feishu"] = run(lambda: feishu.notify(state, report.to_record(cfg, lead)), label="飞书新词推送")
     # With ① run apart, the daily report lists what that job kept since yesterday.
     extra["recent_sources"] = run(lambda: {"rows": store.recent_sources(conn)}, not {"x", "hf"} <= args.skip,
                                   "读取独立 sources 任务线索", "只有同时跳过 x,hf 才读取")
@@ -118,10 +120,11 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
     text = report.daily(cfg, lead, blocks, found, rev, summ, extra)
     if args.out:
         Path(args.out).with_suffix(".json").write_text(json.dumps(
-            {"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ, "keywords": extra["usecases"]}, ensure_ascii=False, indent=1, default=str))
+            {"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ, "keywords": extra["usecases"],
+             "notifications": extra["feishu"]}, ensure_ascii=False, indent=1, default=str))
         log.info("[报告] JSON 已写入 %s", Path(args.out).with_suffix(".json").resolve())
     _finish(args, text, f"New-term radar {date.today()}")
-    return 0
+    return 1 if extra["feishu"].get("error") else 0
 
 
 def main(argv: list[str] | None = None) -> int:

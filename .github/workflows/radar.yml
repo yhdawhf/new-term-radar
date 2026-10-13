@@ -36,6 +36,10 @@ on:
           - daily
           - sources
         default: "daily"
+      test_feishu:
+        description: "Only send one Feishu connection test (no data collection)"
+        type: boolean
+        default: false
 
 concurrency:
   group: radar
@@ -53,6 +57,7 @@ jobs:
       TZ: Asia/Shanghai
       PYTHONUNBUFFERED: "1"
       PAID_ENABLED: "false"
+      FEISHU_TEST: ${{ inputs.test_feishu && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -69,12 +74,23 @@ jobs:
           key: radar-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: radar-state-
 
+      - name: Test Feishu delivery
+        if: env.FEISHU_TEST == 'true'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+        shell: bash
+        run: python -m radar.feishu --test | tee feishu-test.log
+
       - name: Run the radar
+        if: env.FEISHU_TEST != 'true'
         env:
           AISA_API_KEY: ${{ secrets.AISA_API_KEY }}
           GOANYAPI_API_KEY: ${{ secrets.GOANYAPI_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           GSC_TOKEN_JSON: ${{ secrets.GSC_TOKEN_JSON }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
         shell: bash
         run: |
           # Keep new-site queries off until the upstream parameter issue is verified.
@@ -106,6 +122,8 @@ jobs:
         run: |
           if [ -f report.md ]; then
             cat report.md >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$FEISHU_TEST" = "true" ]; then
+            echo "本次仅验证飞书连接；成功与否见 Test Feishu delivery 步骤及 feishu-test.log。" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "本次没有新名字或没有生成报告；详细过程见 Run the radar 日志及下载的 run.log。" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -126,6 +144,7 @@ jobs:
             report.md
             report.json
             run.log
+            feishu-test.log
             state/
           if-no-files-found: ignore
           retention-days: 30
