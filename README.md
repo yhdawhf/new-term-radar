@@ -155,6 +155,16 @@ and from `sources`:
 
 `daily` also writes `report.json` beside the Markdown, with everything the report was built from.
 
+For an execution trace, add `--verbose`; `--log-file state/run.log` also saves it
+(UTF-8, append mode, parent directories created automatically). Diagnostics go to
+stderr, leaving the Markdown report on stdout. The trace includes stage timings,
+skip/failure status, snapshot reads/writes, fetch/filter counts and individual GitHub
+breakout calculations. Trace messages currently use Chinese.
+
+```bash
+python -m radar daily --out report.md --verbose --log-file state/run.log
+```
+
 ## config.json
 
 | Key | What it is |
@@ -189,12 +199,20 @@ python scripts/gsc_auth.py gsc_client.json   # opens a browser once, writes gsc_
 
 ## Run it on GitHub Actions
 
-`.github/workflows/radar.yml` runs `sources` every 8 hours and `daily` once a day, keeps the state in the Actions cache, and writes each report to the run summary. It is off until you opt in:
+This fork runs free signals automatically: `sources` at 00:00, 08:00 and 16:00,
+and `daily` at 09:30 (Asia/Shanghai). It reads the committed `config.github.json`;
+local `config.json` stays ignored. Pushing changes to that config or the radar workflow
+on `main` also triggers a daily validation run.
 
-1. Fork the repository (a private fork is fine).
-2. Remove `config.json` from `.gitignore` and commit your config. It holds no secrets.
-3. Add the secret `AISA_API_KEY`; optionally `GOANYAPI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `RADAR_EMAIL_TO`, `GSC_TOKEN_JSON`.
-4. Set the repository variable `RADAR_ENABLED` to `true`.
+Reports appear in the Actions summary. Detailed logs and the complete state directory
+are retained as artifacts for 30 days; the cache carries history between runs.
+The first cloud run establishes its own baseline, independently of local state.
+
+Paid features are explicitly disabled, even if API keys exist. To enable them later,
+add the `AISA_API_KEY` repository secret and set the workflow's `PAID_ENABLED` to
+`"true"`. `GOANYAPI_API_KEY` and `GSC_TOKEN_JSON` are optional. New-site queries remain
+skipped, and email delivery is not enabled. Pause via Actions > New-term radar >
+Disable workflow. See [the setup guide (Chinese)](docs/GITHUB.zh-CN.md).
 
 ## How the pieces decide
 

@@ -26,6 +26,7 @@ import urllib.request
 from pathlib import Path
 
 from . import UA, snap
+from .diagnostics import log
 from .terms import by_source, surges
 
 TIMEOUT = 40
@@ -41,11 +42,13 @@ _LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>")
 def fetch(url: str) -> str:
     req = urllib.request.Request(url.replace("&amp;", "&"), headers={"User-Agent": UA})
     for attempt in range(RETRIES):
+        log.debug("[Sitemap 请求] GET %s 尝试=%d/%d", url, attempt + 1, RETRIES)
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
                 body = res.read()
             return (gzip.decompress(body) if body[:2] == b"\x1f\x8b" else body).decode("utf-8", "replace")
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exc:
+            log.warning("[Sitemap 请求失败] %s %s", url, type(exc).__name__)
             if attempt == RETRIES - 1:
                 raise
             time.sleep(RETRY_PAUSE * (attempt + 1))
@@ -56,6 +59,7 @@ def site_urls(index: str, shards: str | None, pause: float, strip_locale: bool =
     files = [index] if not shards else \
         [u for u in _LOC.findall(fetch(index)) if re.search(shards, u.replace("&amp;", "&"))]
     urls: set[str] = set()
+    log.info("[Sitemap] %s 匹配文件=%d，请求间隔=%ss，合并语言路径=%s", index, len(files), pause, strip_locale)
     for i, u in enumerate(files):
         if i or shards:
             time.sleep(pause)
@@ -73,6 +77,7 @@ def slug_text(url: str) -> str:
 def diff(cfg: dict, state: Path) -> dict:
     """New URLs per site against the stored snapshot, then the terms that surge in them."""
     if not cfg["sitemaps"]:
+        log.info("[Sitemap] 未配置站点")
         return {"skipped": True}
     report, recent, baseline = {}, [], []
     for i, (site, s) in enumerate(cfg["sitemaps"].items()):
@@ -86,12 +91,16 @@ def diff(cfg: dict, state: Path) -> dict:
             now = site_urls(s["index"], s.get("shards"), pause, bool(s.get("strip_locale")))
         except Exception as exc:  # noqa: BLE001 — one site down must not stop the others
             report[site] = {"error": str(exc)[:120]}
+            log.warning("[Sitemap/%s] 失败，保留旧快照：%s", site, report[site]["error"])
             continue
         new = sorted(now - old) if old is not None else []
         report[site] = {"urls": len(now), "new": len(new), "first_run": old is None, "sample": new[:8]}
+        log.info("[Sitemap/%s] 旧网址=%s，当前=%d，新增=%d", site, len(old) if old is not None else "无快照", len(now), len(new))
         recent += [(u, slug_text(u)) for u in new]
         baseline += [(u, slug_text(u)) for u in (old or set())]
         if now:   # an empty answer (blocked, broken) keeps the old snapshot
             snap.save(path, sorted(now))
     ratio = len(recent) / max(len(baseline), 1)
+    log.info("[Sitemap 词频] 新网址=%d，基线网址=%d，比例=%.6f；至少%d个不同新网址共现，lift=新频次/(旧频次×比例+1)",
+             len(recent), len(baseline), ratio, MIN_URLS)
     return {"sites": report, "terms": surges(by_source(recent), by_source(baseline), ratio, MIN_URLS, TOP)}

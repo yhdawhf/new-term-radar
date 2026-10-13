@@ -16,6 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import UA, aisa, snap
+from .diagnostics import log
 from .i18n import t
 from .terms import STOP, _drop_nested, names
 
@@ -85,7 +86,9 @@ def novel_names(posts: list[dict], vocab: dict[str, str], now: datetime) -> list
 def x_new(cfg: dict, state: Path) -> dict:
     handles = accounts(cfg)
     if not handles:
+        log.info("[X] 未配置关注账号")
         return {"skipped": True}
+    log.info("[X] 账号=%d，回看=%dh，词表保留=%d天；多账号共现或强名字且赞数 >= %d", len(handles), LOOKBACK_HOURS, VOCAB_DAYS, X_MIN_LIKES)
     data, cost = aisa.call_all([{"call_id": h, "tool": "get_twitter_user_last_tweets", "arguments": {"userName": h}}
                                 for h in handles])
     posts = []
@@ -123,6 +126,7 @@ def base_name(model_id: str) -> str:
 
 
 def hf_new(cfg: dict, state: Path) -> dict:
+    log.info("[Hugging Face] 获取热门前%d；当前前%d与上次前%d的模型 ID 比较，再清洗量化/微调后缀", HF_FETCH, HF_TOP, HF_FETCH)
     req = urllib.request.Request(f"https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit={HF_FETCH}",
                                  headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=40) as res:

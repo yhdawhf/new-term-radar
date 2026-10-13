@@ -21,6 +21,7 @@ import statistics
 from datetime import date, timedelta
 
 from . import aisa, store
+from .diagnostics import log
 
 BEFORE_DAYS = 30
 MAX_VARIANTS = 3      # each costs one Trends task ($0.0012 in October 2026)
@@ -93,6 +94,7 @@ def review(cfg: dict, conn: sqlite3.Connection, today: date | None = None) -> di
     today = today or date.today()
     c = cfg["review"]
     due = store.due(conn, today, c["after_days"], c["per_day"])
+    log.info("[Trends 复盘] 等待至少%d天，每次最多%d条，本次到期=%d", c["after_days"], c["per_day"], len(due))
     if not due:
         return {"checked": [], "cost_micros": 0, "after_days": c["after_days"]}
     calls, plan = plan_calls(due, today, c["after_days"])

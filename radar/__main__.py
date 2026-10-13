@@ -25,39 +25,62 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
 from . import breakout, config, gsc, new_sites, notify, report, review, sitemaps, sources, store, usecases
 from .i18n import t
+from .diagnostics import configure, log, result
 
 SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "gsc", "review", "judge", "usecases"}
 
 
-def run(fn, skip: bool = False) -> dict:
+def run(fn, skip: bool = False, label: str = "step", reason: str = "--skip") -> dict:
     """One signal failing still leaves a report: its error takes its place."""
     if skip:
+        log.info("[%s] 跳过：%s", label, reason)
         return {"skipped": True}
+    started = time.monotonic()
+    log.info("[%s] 开始", label)
     try:
-        return fn()
+        block = fn()
     except Exception as exc:  # noqa: BLE001
-        return {"error": f"{type(exc).__name__}: {' '.join(str(exc).split())[:160]}"}
+        block = {"error": f"{type(exc).__name__}: {' '.join(str(exc).split())[:160]}"}
+    result(label, block)
+    log.info("[%s] 耗时 %.2fs", label, time.monotonic() - started)
+    return block
+
+
+def _leads(cfg: dict, blocks: dict) -> tuple[list[dict], dict]:
+    started = time.monotonic()
+    log.info("[候选合并/名字判断] 开始；模型=%s，阈值=%s", cfg["judge"]["model"] or "关闭", cfg["judge"]["min_score"])
+    lead, judged = report.leads(cfg, blocks)
+    result("名字判断", judged)
+    log.info("[候选合并] 原始=%d，去重=%d，可展示=%d，可入库=%d，耗时 %.2fs",
+             sum(len(b.get("terms", [])) for b in blocks.values()), len(lead), len(report.named(cfg, lead)),
+             len(report.to_record(cfg, lead)), time.monotonic() - started)
+    for row in lead:
+        log.debug("[候选] %s | 信号=%s | 名字得分=%s | 已覆盖=%s", row["term"], ",".join(row["kinds"]),
+                  row.get("named", "未评分"), row["known"] or "无")
+    return lead, judged
 
 
 def _finish(args, text: str, subject: str) -> None:
     if args.out:
         Path(args.out).write_text(text)
+        log.info("[报告] Markdown 已写入 %s", Path(args.out).resolve())
     print(text)
     if args.mail:
         print(notify.send(subject, text))
 
 
 def cmd_sources(args, cfg: dict, state: Path) -> int:
-    blocks = {"x": run(lambda: sources.x_new(cfg, state), "x" in args.skip),
-              "hf": run(lambda: sources.hf_new(cfg, state), "hf" in args.skip)}
-    lead, judged = report.leads(cfg, blocks)
+    blocks = {"x": run(lambda: sources.x_new(cfg, state), "x" in args.skip, "X"),
+              "hf": run(lambda: sources.hf_new(cfg, state), "hf" in args.skip, "Hugging Face")}
+    lead, judged = _leads(cfg, blocks)
     conn = store.connect(state)
-    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
+    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}, label="SQLite 入库")}
     errors = any(b.get("error") for b in (*blocks.values(), *extra.values()))
     if report.named(cfg, lead) or errors:
         _finish(args, report.sources(cfg, lead, blocks, extra), f"New-term radar · sources {date.today()}")
@@ -69,30 +92,34 @@ def cmd_sources(args, cfg: dict, state: Path) -> int:
 def cmd_daily(args, cfg: dict, state: Path) -> int:
     weekly = args.new_sites or date.today().weekday() == cfg["new_sites"]["weekday"]
     blocks = {
-        "x": run(lambda: sources.x_new(cfg, state), "x" in args.skip),
-        "hf": run(lambda: sources.hf_new(cfg, state), "hf" in args.skip),
-        "breakout": run(lambda: breakout.breakouts(cfg, state), "breakout" in args.skip),
-        "sitemap": run(lambda: sitemaps.diff(cfg, state), "sitemaps" in args.skip),
-        "newsite": run(lambda: new_sites.new_sites(cfg, state), "newsites" in args.skip or not weekly),
+        "x": run(lambda: sources.x_new(cfg, state), "x" in args.skip, "X"),
+        "hf": run(lambda: sources.hf_new(cfg, state), "hf" in args.skip, "Hugging Face"),
+        "breakout": run(lambda: breakout.breakouts(cfg, state), "breakout" in args.skip, "GitHub 爆发"),
+        "sitemap": run(lambda: sitemaps.diff(cfg, state), "sitemaps" in args.skip, "Sitemap"),
+        "newsite": run(lambda: new_sites.new_sites(cfg, state), "newsites" in args.skip or not weekly,
+                       "新站", "--skip" if "newsites" in args.skip else "未到配置的每周运行日"),
     }
-    found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip)
-    lead, judged = report.leads(cfg, blocks)
+    found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip, "Search Console")
+    lead, judged = _leads(cfg, blocks)
     conn = store.connect(state)
-    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))})}
+    extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}, label="SQLite 入库")}
     # With ① run apart, the daily report lists what that job kept since yesterday.
-    extra["recent_sources"] = run(lambda: {"rows": store.recent_sources(conn)}, not {"x", "hf"} <= args.skip)
+    extra["recent_sources"] = run(lambda: {"rows": store.recent_sources(conn)}, not {"x", "hf"} <= args.skip,
+                                  "读取独立 sources 任务线索", "只有同时跳过 x,hf 才读取")
     # The names to read for their generic terms: things, not words that surged (usecases.names_to_read).
     names = usecases.names_to_read(report.to_record(cfg, lead), extra["recent_sources"].get("rows", []))
     repos = {r["term"]: r["repo"] for r in lead if r.get("repo")}
     extra["usecases"] = run(lambda: usecases.run(cfg, state, list(dict.fromkeys(names)), repos),
-                            "usecases" in args.skip or not cfg["usecases"]["per_day"])
-    run(lambda: store.record(conn, report.usecase_leads(extra["usecases"])))
-    rev = run(lambda: review.review(cfg, conn), "review" in args.skip)
-    summ = run(lambda: store.summary(conn))
+                            "usecases" in args.skip or not cfg["usecases"]["per_day"],
+                            "关键词表", "--skip" if "usecases" in args.skip else "配置的 per_day 为 0")
+    run(lambda: {"recorded": store.record(conn, report.usecase_leads(extra["usecases"]))}, label="关键词 SQLite 入库")
+    rev = run(lambda: review.review(cfg, conn), "review" in args.skip, "Trends 复盘")
+    summ = run(lambda: store.summary(conn), label="历史命中统计")
     text = report.daily(cfg, lead, blocks, found, rev, summ, extra)
     if args.out:
         Path(args.out).with_suffix(".json").write_text(json.dumps(
             {"leads": lead, **blocks, "gsc": found, "review": rev, "summary": summ, "keywords": extra["usecases"]}, ensure_ascii=False, indent=1, default=str))
+        log.info("[报告] JSON 已写入 %s", Path(args.out).with_suffix(".json").resolve())
     _finish(args, text, f"New-term radar {date.today()}")
     return 0
 
@@ -106,17 +133,25 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--skip", default="", help="comma-separated: " + ",".join(sorted(SKIPPABLE)))
     p.add_argument("--new-sites", action="store_true", help="run the weekly new-site signal today")
     p.add_argument("--mail", action="store_true", help="mail the report (see radar/notify.py)")
+    p.add_argument("--verbose", action="store_true", help="print execution details to stderr")
+    p.add_argument("--log-file", help="also save execution details as UTF-8 text (append)")
     args = p.parse_args(argv)
     args.skip = {s for s in args.skip.split(",") if s}
     unknown = args.skip - SKIPPABLE
     if unknown:
         p.error(f"--skip: unknown {sorted(unknown)}")
+    configure(args.verbose, args.log_file)
+    started = time.monotonic()
+    log.info("[启动] command=%s Python=%s config=%s state=%s skip=%s", args.command, sys.version.split()[0],
+             Path(args.config).resolve(), Path(args.state).resolve(), ",".join(sorted(args.skip)) or "无")
     cfg = config.load(Path(args.config))
     if "judge" in args.skip:
         cfg["judge"]["model"] = ""
     state = Path(args.state)
     state.mkdir(parents=True, exist_ok=True)
-    return cmd_sources(args, cfg, state) if args.command == "sources" else cmd_daily(args, cfg, state)
+    code = cmd_sources(args, cfg, state) if args.command == "sources" else cmd_daily(args, cfg, state)
+    log.info("[结束] exit=%d，总耗时 %.2fs；单个信号的失败见上述日志及报告状态。", code, time.monotonic() - started)
+    return code
 
 
 if __name__ == "__main__":

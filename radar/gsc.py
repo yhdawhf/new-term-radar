@@ -25,6 +25,7 @@ import urllib.request
 from datetime import date, timedelta
 
 from . import UA
+from .diagnostics import log
 
 LAG_DAYS = 1
 RECENT, BEFORE = 3, 60
@@ -77,6 +78,7 @@ def fresh_queries(recent: list[dict], before: list[dict]) -> list[dict]:
 def gsc_new(cfg: dict) -> dict:
     site = cfg["gsc"].get("site")
     if not site:
+        log.info("[Search Console] 未配置 gsc.site")
         return {"off": True}
     access = _token(cfg)
     end = date.today() - timedelta(days=LAG_DAYS)

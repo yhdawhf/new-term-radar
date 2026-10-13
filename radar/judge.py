@@ -14,6 +14,7 @@ import json
 import re
 
 from . import aisa
+from .diagnostics import log
 
 CHUNK = 25
 SYSTEM = (
@@ -50,10 +51,12 @@ def parse(answer: str, n: int) -> dict[int, float]:
 def score(rows: list[dict], model: str) -> dict:
     """Sets r["named"] on each row the model scored. Returns {"judged": n} or {"error": ...}."""
     if not model:
+        log.info("[名字判断] 模型关闭；未评分词仍展示，不能视为已确认专有名词")
         return {"judged": 0, "skipped": True}
     judged = 0
     for start in range(0, len(rows), CHUNK):
         chunk = rows[start:start + CHUNK]
+        log.info("[名字判断] 批次=%d，词数=%d，每词最多3段上下文", start // CHUNK + 1, len(chunk))
         user = json.dumps([{"i": i, "term": r["term"], "examples": [e[:160] for e in r.get("examples", [])[:3]]}
                            for i, r in enumerate(chunk)], ensure_ascii=False)
         try:

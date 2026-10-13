@@ -25,6 +25,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import UA, snap
+from .diagnostics import log
 from .i18n import t
 
 PAGES = 2
@@ -34,6 +35,7 @@ API = "https://api.github.com"
 
 
 def _get(path: str) -> dict:
+    log.debug("[GitHub 请求] GET %s%s", API, path)
     headers = {"Accept": "application/vnd.github+json", "User-Agent": UA}
     tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if tok:
@@ -82,15 +84,19 @@ def breakouts(cfg: dict, state: Path) -> dict:
     c = cfg["breakout"]
     since = (date.today() - timedelta(days=c["window_days"])).isoformat()
     q = urllib.parse.quote(f"created:>={since} stars:>={c['min_stars']}")
+    log.info("[GitHub 筛选] 创建日期 >= %s，星数 >= %d；平均星速 >= %d/天 或较上次增星 >= %d；不限 AI 类别",
+             since, c["min_stars"], c["velocity_min"], c["delta_min"])
     repos: list[dict] = []
     for page in range(1, PAGES + 1):
         items = _get(f"/search/repositories?q={q}&sort=stars&order=desc&per_page=100&page={page}").get("items", [])
         repos += items
+        log.info("[GitHub 搜索] 第%d页 %d 个仓库", page, len(items))
         if len(items) < 100:
             break
     path = state / "gh_stars.json.gz"
     before = snap.load(path)
     rows = score(repos, before, datetime.now(timezone.utc), c["velocity_min"], c["delta_min"])
+    log.info("[GitHub 筛选] 搜索=%d，保留最多%d个爆发仓库，实际=%d", len(repos), TOP, len(rows))
     if repos:
         snap.save(path, {r["full_name"]: r["stargazers_count"] for r in repos})
     flagged_path = state / "gh_flagged.json.gz"
@@ -98,6 +104,8 @@ def breakouts(cfg: dict, state: Path) -> dict:
     today = date.today().isoformat()
     for row in rows:
         row["new"] = row["repo"] not in flagged
+        log.debug("[GitHub 仓库] %s stars=%d age=%s天 velocity=%d/天 delta=%s 首次标记=%s",
+                  row["repo"], row["stars"], row["age_days"], row["velocity"], row["delta"], row["new"])
         flagged.setdefault(row["repo"], today)
     cutoff = (date.today() - timedelta(days=FLAGGED_DAYS)).isoformat()
     snap.save(flagged_path, {k: v for k, v in flagged.items() if v >= cutoff})

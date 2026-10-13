@@ -16,6 +16,7 @@ import sqlite3
 import statistics
 from datetime import date, timedelta
 from pathlib import Path
+from .diagnostics import log
 
 NOTES_KEPT = 10
 SUMMARY_WINDOW = 60
@@ -39,6 +40,7 @@ def connect(state_dir: Path) -> sqlite3.Connection:
     state_dir.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(state_dir / "radar.db")
     conn.execute(SCHEMA)
+    log.info("[SQLite] 打开 %s；leads 以 term 为主键，保留首次发现日期并合并后续信号", (state_dir / "radar.db").resolve())
     return conn
 
 

@@ -127,6 +127,16 @@ python -m radar daily --skip x,hf --out report.md  # 其余全部，每天一次
 
 其他参数：`--skip` 可选 `x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases`；`--new-sites` 让每周信号今天就跑；`--mail` 发邮件（见下）；`--state DIR` 指定数据库和快照的目录。
 
+需要查看每一步如何运行时，加 `--verbose`；用 `--log-file` 保存完整过程：
+
+```bash
+python -m radar daily --out report.md --verbose --log-file state/run.log
+```
+
+日志显示各信号的开始、结束、耗时、跳过/失败、首次快照、抓取和筛选数量、GitHub 逐仓库计算、sitemap 重试和快照读写，以及候选合并和入库结果。日志输出到 stderr，报告仍输出到 stdout；日志文件使用 UTF-8、追加写入，父目录会自动创建。不加这两个参数时保持原来的输出方式。
+
+结合代码理解设计和本机首次运行结果，见 [运行原理与首次运行](docs/RUNNING.zh-CN.md)。
+
 ## 报告长什么样
 
 2026-10-12 一次真实运行的节选（中文报告，`"lang": "zh"`）：
@@ -182,12 +192,13 @@ python scripts/gsc_auth.py gsc_client.json   # 打开一次浏览器授权，写
 
 ## 在 GitHub Actions 上跑
 
-`.github/workflows/radar.yml` 每 8 小时跑一次 `sources`、每天跑一次 `daily`，状态存在 Actions 缓存里，报告写到每次运行的摘要页。默认关闭，需要你主动开启：
+这个 fork 已配置免费定时运行：北京时间 00:00、08:00、16:00 执行 `sources`，09:30 执行 `daily`。云端读取已提交的 `config.github.json`；本机 `config.json` 仍被 Git 忽略。更新云端配置或工作流并推送到 `main`，会额外触发一次日报验证。
 
-1. Fork 这个仓库（私有 fork 也可以）。
-2. 把 `config.json` 从 `.gitignore` 里删掉，提交你的配置。配置里没有任何密钥。
-3. 添加 secret `AISA_API_KEY`；可选 `GOANYAPI_API_KEY`、`RESEND_API_KEY`、`EMAIL_FROM`、`RADAR_EMAIL_TO`、`GSC_TOKEN_JSON`。
-4. 把仓库变量 `RADAR_ENABLED` 设为 `true`。
+报告写入 Actions 摘要，详细日志和完整 `state/` 备份作为运行附件保留 30 天，后续任务通过缓存延续历史。首次云端运行会建立自己的基线，本机状态不会自动上传。
+
+付费功能明确关闭，添加 Key 本身不会产生付费调用。以后启用时，在仓库 Secrets 添加 `AISA_API_KEY`，并把工作流的 `PAID_ENABLED` 改为 `"true"`；`GOANYAPI_API_KEY` 和 `GSC_TOKEN_JSON` 可选。新站接口继续跳过，邮件发送未启用。暂停运行可在 Actions 的 New-term radar 菜单中选择 Disable workflow。
+
+详细说明见 [GitHub 运行配置](docs/GITHUB.zh-CN.md)。
 
 ## 各部分怎么判断
 

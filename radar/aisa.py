@@ -17,6 +17,7 @@ import urllib.error
 import urllib.request
 
 from . import UA
+from .diagnostics import log
 
 ROUTER = os.environ.get("AISA_ROUTER_BASE_URL", "https://tools.aisa.one") + "/v1/tool-router/aisa-batch-use"
 CHAT = os.environ.get("AISA_API_BASE_URL", "https://api.aisa.one") + "/v1/chat/completions"
@@ -72,7 +73,9 @@ def call_all(calls: list[dict]) -> tuple[dict[str, dict], int]:
     """call() in batches of BATCH. A failed batch raises and stops the rest."""
     out, cost = {}, 0
     for i in range(0, len(calls), BATCH):
+        log.info("[AIsa] 工具批次=%d，调用数=%d（付费请求，无自动重试）", i // BATCH + 1, len(calls[i:i + BATCH]))
         data, c = call(calls[i:i + BATCH])
+        log.info("[AIsa] 成功响应=%d，批次返回费用=%d micro-USD", len(data), c)
         out.update(data)
         cost += c
     return out, cost

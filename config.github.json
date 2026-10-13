@@ -1,0 +1,70 @@
+{
+  "lang": "zh",
+  "x_accounts": {
+    "labs": [
+      "AnthropicAI",
+      "claudeai",
+      "OpenAI",
+      "OpenAIDevs",
+      "GoogleDeepMind",
+      "GoogleAIStudio",
+      "Alibaba_Qwen",
+      "deepseek_ai",
+      "Kimi_Moonshot",
+      "MiniMax__AI",
+      "Zai_org",
+      "xai",
+      "AIatMeta",
+      "MistralAI",
+      "huggingface",
+      "cursor_ai"
+    ],
+    "bloggers": [
+      "dotey",
+      "op7418",
+      "_akhaliq",
+      "TeksEdge",
+      "simonw",
+      "swyx",
+      "karpathy",
+      "rowancheung"
+    ]
+  },
+  "sitemaps": {
+    "glama": {
+      "index": "https://glama.ai/sitemap.xml",
+      "shards": "/(mcp-servers|mcp-remote-servers)/\\d+\\.xml$|blog-posts",
+      "pause": 2
+    }
+  },
+  "topics": {
+    "AI video": "\\bvideos?\\b|animat|avatar|lip ?sync|seedance|\\bveo\\b|\\bsora\\b|kling|hailuo|remotion|hyperframes"
+  },
+  "known_terms": [
+    "claude code",
+    "remotion"
+  ],
+  "stop_words": [],
+  "judge": {
+    "model": "gpt-4.1-mini",
+    "min_score": 0.5
+  },
+  "breakout": {
+    "window_days": 14,
+    "min_stars": 300,
+    "velocity_min": 200,
+    "delta_min": 400
+  },
+  "new_sites": {
+    "queries": {
+      "ai": "%ai%",
+      "video": "%video%"
+    },
+    "weekday": 0
+  },
+  "review": {
+    "after_days": 14,
+    "per_day": 5
+  },
+  "gsc": {}
+}
