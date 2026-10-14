@@ -4,18 +4,20 @@
 
 ## 在这台 Mac 上运行
 
-系统 `/usr/bin/python3` 是 3.9.6，低于项目要求的 3.10。本次用机器已有的 Python 3.12.14 创建了 `.venv`，并安装 pytest 和 markdown 来运行测试。核心抓取逻辑只依赖标准库。
+系统 `/usr/bin/python3` 是 3.9.6，低于项目要求的 3.10。本次用机器已有的 Python 3.12.14 创建了 `.venv`，并安装 pytest 和 markdown 来运行测试。核心抓取逻辑只依赖标准库。2026-10-14 同步作者 0.2.1 后，另安装了 MCP 依赖；合并后的 103 项测试全部通过。
 
 在项目目录执行：
 
 ```bash
 .venv/bin/python -m radar daily \
   --config config.json --state state --out report.md \
-  --skip x,newsites,judge,usecases \
+  --skip x,newsites,judge,usecases,review \
   --verbose --log-file state/run.log
 ```
 
-本机 `config.json` 使用示例配置，报告语言改为 `zh`，sitemap 仅启用 Glama。保留示例 X 账号和主题，供以后调整，但本次跳过 X。首次运行时没有检测到 AIsa 密钥，所以跳过 X、新站、模型判断；Search Console 未配置。上面的命令也跳过新版的付费关键词表。复盘仍执行本地到期检查，没有到期线索就不会请求付费接口。
+本机 `config.json` 使用示例配置，报告语言改为 `zh`，sitemap 仅启用 Glama。保留示例 X 账号和主题，供以后调整，但免费运行时跳过 X。上面的命令跳过 X、新站、模型判断、付费关键词表和 Trends 复盘；Search Console 未配置。
+
+作者 0.2.1 增加了以下入口：`python -m radar leads --days 7` 免费读取本地历史；`python -m radar keywords "名字"` 主动查询付费关键词表；`python -m radar mcp` 启动 stdio MCP 服务。MCP 的 `recent_leads` 只读取本地历史，`keyword_table` 和 `run_radar` 可能调用付费接口，不因安装而自动执行。作者上游仍保留在 `upstream`，自己的远程为 `origin`；不要用覆盖目录的方式更新，以免丢失飞书和日志改动。
 
 首次抓取前检查了示例站点的 robots.txt：Glama 未禁止所访问的 sitemap 路径，配置每次间隔 2 秒；mcp.so 和 lobehub.com 的 robots.txt 返回 HTTP 403，本机配置暂未启用这两个站点。
 
@@ -33,7 +35,7 @@ state = Path(args.state)
 state.mkdir(parents=True, exist_ok=True)
 ```
 
-`config.load()` 把用户配置与默认值合并，设置报告语言和停用词。密钥来自环境变量，不放在 `config.json`。随后选择两个任务之一：
+`config.load()` 把用户配置与默认值合并，设置报告语言和停用词。密钥不放在 `config.json`；AIsa 优先使用环境变量，作者新版还可读取 `aisa login` 保存的本机凭证。日常采集选择以下两个任务之一：
 
 - `sources`：只采集 X 与 Hugging Face，适合每隔几小时执行。没有新候选也没有错误时，只打印简短状态，不写报告。
 - `daily`：依次采集各信号，合并候选，写入 SQLite，读取独立 sources 任务留下的名字，生成关键词表并入库，复盘，再生成 Markdown 和 JSON。各信号串行运行，日志中的耗时可以直接看出时间花在哪里。

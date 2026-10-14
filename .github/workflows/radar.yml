@@ -27,7 +27,6 @@ on:
   schedule:
     - cron: "0 */8 * * *"      # sources
     - cron: "30 1 * * *"       # daily
-    - cron: "*/5 * * * *"      # Temporary schedule verification; remove after checking.
   workflow_dispatch:
     inputs:
       command:

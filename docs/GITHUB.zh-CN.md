@@ -11,6 +11,8 @@
 
 GitHub 定时触发可能延后，时间不是准点保证。云端进程使用 `TZ=Asia/Shanghai`，日期、每周判断和日志时间按北京时间计算。
 
+工作流显示 `active` 或手动运行成功，都不能证明定时触发已经生效。查看 Actions 运行记录的事件类型：`schedule` 才是自动定时，`workflow_dispatch` 是手动，`push` 是配置提交触发。Fork 后应检查并启用定时工作流；GitHub 的规则见[官方说明](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)。
+
 提交到 main 的工作流或 `config.github.json` 发生变化时，会额外执行一次日报。也可在 Actions > New-term radar > Run workflow 选择 `daily` 或 `sources` 手动执行。首次日报若尚无 HF 快照，会顺便建立 HF 基线；后续日报复用 sources 保存的线索。
 
 每次运行页面的 Summary 显示报告；Artifacts 中包含 `report.md`、日报的 `report.json`、`run.log`、完整 `state/`（SQLite 和 gzip 快照）。没有新名字的 sources 不生成报告，但仍保存日志和状态。
@@ -30,6 +32,16 @@ GitHub 定时触发可能延后，时间不是准点保证。云端进程使用 
 sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历史。每轮缓存键包含 run ID 和 attempt，失败重跑也能保存新状态。缓存失效时，下一轮重新建立基线，历史可能中断；运行附件还提供完整状态备份，保留 30 天。
 
 本机首次运行的 `state` 不自动上传；云端从自己的首次运行开始累计变化与线索。
+
+## 2026-10-14 排查记录
+
+更新前，云端只有 10 月 13 日 16:33 的手动日报和 17:10 的飞书连接测试，没有任何 `schedule` 记录。首次日报生成时尚未加入飞书功能；后来的连接测试不执行采集。这解释了此前没有实际新词推送，不能据此推断没有新数据。
+
+本次同步作者版本后，重新提交定时配置并通过 GitHub API 停用、启用工作流。14:37 的配置提交触发了真实日报，检测到 28 个候选，其中 20 个符合现有入库规则并成功推送；飞书待发队列为 0。详见[该次运行](https://github.com/yhdawhf/new-term-radar/actions/runs/38523323609)。
+
+14:40 的手动 sources 又发现 `lfm2.5` 和 `drama 3`，飞书成功推送 2 个候选，待发为 0。详见[该次运行](https://github.com/yhdawhf/new-term-radar/actions/runs/38523620223)。这些是实际发送结果；是否在客户端看到消息，还需查看机器人所在群聊。
+
+重新启用后，临时增加过每 5 分钟的检查规则。到 14:49 仍没有观察到 `schedule` 运行，随后删除临时规则，保留上述正式时间表。自动触发是否恢复仍待真实定时运行确认；后台未触发的具体原因尚未确定，不能仅凭工作流 `active` 状态判定恢复成功。
 
 ## 以后开启 AIsa
 
