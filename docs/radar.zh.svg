@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="1540" viewBox="0 0 680 770" font-family="PingFang SC, Noto Sans CJK SC, Noto Sans SC, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="1784" viewBox="0 0 680 892" font-family="PingFang SC, Noto Sans CJK SC, Noto Sans SC, sans-serif">
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-<rect width="680" height="770" fill="#FFFFFF"/>
+<rect width="680" height="892" fill="#FFFFFF"/>
 <path id="p1" d="M107.5 96 L300 150" fill="none" stroke="#D85A30" stroke-width="1" marker-end="url(#arrow)"/>
 <path id="p2" d="M262.5 96 L325 150" fill="none" stroke="#D85A30" stroke-width="1" marker-end="url(#arrow)"/>
 <path id="p3" d="M417.5 96 L355 150" fill="none" stroke="#D85A30" stroke-width="1" marker-end="url(#arrow)"/>
@@ -51,9 +51,18 @@
 <rect x="190" y="662" width="300" height="56" rx="4" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
 <text x="340.0" y="685.5" fill="#444441" font-weight="500">14 天后 Google Trends 复核</text>
 <text x="340.0" y="705.5" fill="#5F5E5A" font-size="12">名字和通用词都复核 · 不计未结算的最后两天</text>
+<rect x="40" y="776" width="190" height="56" rx="4" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text x="135.0" y="799.5" fill="#444441" font-weight="500">命令行 + 定时任务</text>
+<text x="135.0" y="819.5" fill="#5F5E5A" font-size="12">daily · sources · keywords</text>
+<rect x="245" y="776" width="190" height="56" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340.0" y="799.5" fill="#0C447C" font-weight="500">3 个 Agent Skill</text>
+<text x="340.0" y="819.5" fill="#185FA5" font-size="12">一站式 · 只收集 · 只做关键词</text>
+<rect x="450" y="776" width="190" height="56" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="545.0" y="799.5" fill="#0C447C" font-weight="500">MCP 服务器</text>
+<text x="545.0" y="819.5" fill="#185FA5" font-size="12">查线索 · 出新词表 · 跑一次</text>
 </g>
-<text x="640" y="309" text-anchor="end" font-size="11" fill="#185FA5">建议：子木 @CoderJeffLee</text><text x="552.5" y="536" text-anchor="middle" font-size="11" fill="#A32D2D">没配或挂了：表照出，</text><text x="552.5" y="551" text-anchor="middle" font-size="11" fill="#A32D2D">并在表头注明「不完整」</text>
-<rect x="40" y="740" width="14" height="14" rx="3" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/><text x="62" y="752" font-size="12" fill="#444441">信号与取证</text><rect x="168" y="740" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/><text x="190" y="752" font-size="12" fill="#444441">报告产出</text><rect x="285" y="740" width="14" height="14" rx="3" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/><text x="307" y="752" font-size="12" fill="#444441">这次新增</text><rect x="402" y="740" width="14" height="14" rx="3" fill="none" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3"/><text x="424" y="752" font-size="12" fill="#444441">可选来源</text><path d="M518 747 H548" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" fill="none"/><text x="556" y="752" font-size="12" fill="#444441">命中率写回日报</text>
+<path d="M40 752 H640" stroke="#D3D1C7" stroke-width="0.5" fill="none"/><text x="40" y="768" font-size="12" fill="#5F5E5A" font-weight="500">三种用法，同一套引擎</text><text x="640" y="309" text-anchor="end" font-size="11" fill="#185FA5">建议：子木 @CoderJeffLee</text><text x="552.5" y="536" text-anchor="middle" font-size="11" fill="#A32D2D">没配或挂了：表照出，</text><text x="552.5" y="551" text-anchor="middle" font-size="11" fill="#A32D2D">并在表头注明「不完整」</text>
+<rect x="40" y="862" width="14" height="14" rx="3" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/><text x="62" y="874" font-size="12" fill="#444441">信号与取证</text><rect x="168" y="862" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/><text x="190" y="874" font-size="12" fill="#444441">报告产出</text><rect x="285" y="862" width="14" height="14" rx="3" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/><text x="307" y="874" font-size="12" fill="#444441">这次新增</text><rect x="402" y="862" width="14" height="14" rx="3" fill="none" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3"/><text x="424" y="874" font-size="12" fill="#444441">可选来源</text><path d="M518 869 H548" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" fill="none"/><text x="556" y="874" font-size="12" fill="#444441">命中率写回日报</text>
 <circle r="4" fill="#D85A30"><animateMotion dur="2.4s" repeatCount="indefinite" begin="0.0s"><mpath href="#p1"/></animateMotion></circle>
 <circle r="4" fill="#D85A30"><animateMotion dur="2.4s" repeatCount="indefinite" begin="0.6s"><mpath href="#p2"/></animateMotion></circle>
 <circle r="4" fill="#D85A30"><animateMotion dur="2.4s" repeatCount="indefinite" begin="1.2s"><mpath href="#p3"/></animateMotion></circle>

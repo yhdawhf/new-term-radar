@@ -7,7 +7,9 @@ rsvg-convert renders each frame (it does not run SVG animation) and ffmpeg joins
 import math, subprocess, sys, tempfile
 from pathlib import Path
 
-W, H = 680, 770
+W, H = 680, 892
+USE_Y = 760          # the row of ways to use it
+LEGEND_Y = 862
 AMB = dict(fill="#FAECE7", stroke="#993C1D", title="#712B13", sub="#993C1D")
 GRY = dict(fill="#F1EFE8", stroke="#5F5E5A", title="#444441", sub="#5F5E5A")
 GRN = dict(fill="#E1F5EE", stroke="#0F6E56", title="#085041", sub="#0F6E56")
@@ -26,6 +28,9 @@ ZH = {
     "daily": ("日报（每天一次）", "新词表在最前 · 线索存入 radar.db"),
     "review": ("14 天后 Google Trends 复核", "名字和通用词都复核 · 不计未结算的最后两天"),
     "credit": f"建议：{CREDIT_TABLE}",
+    "use_h": "三种用法，同一套引擎",
+    "use": [("命令行 + 定时任务", "daily · sources · keywords"), ("3 个 Agent Skill", "一站式 · 只收集 · 只做关键词"),
+            ("MCP 服务器", "查线索 · 出新词表 · 跑一次")],
     "legend": ("信号与取证", "报告产出", "这次新增", "可选来源", "命中率写回日报"),
 }
 PROD = {**ZH, "s2": ("② GitHub", "爆发仓库 · 共用词"), "s4": ("④ 搜索控制台", "首次曝光的词"),
@@ -44,8 +49,12 @@ EN = {
     "daily": ("Daily report (once a day)", "keyword table first · leads kept in radar.db"),
     "review": ("Google Trends check, 14 days later", "names and generic terms · last two days left out"),
     "credit": f"Idea: {CREDIT_TABLE}",
+    "use_h": "Three ways in, one engine",
+    "use": [("Command line + schedule", "daily · sources · keywords"), ("3 Agent Skills", "one run, or its two halves"),
+            ("MCP server", "leads · keyword table · run")],
     "legend": ("signals", "reports", "new", "optional", "hit rate fed back"),
 }
+PROD.pop("use")      # the production radar runs on a schedule only
 VARIANTS = {"prod-zh": PROD, "oss-zh": ZH, "oss-en": EN}
 
 
@@ -90,10 +99,13 @@ def scene(T):
         box(40, 322, 230, 56, GRN, T["sources"]), box(310, 316, 330, 86, BLU, T["table"]),
         box(310, 444, 140, 56, AMB, T["evidence"]), box(465, 444, 175, 72, BLU, T["goany"], dashed=True),
         box(190, 568, 300, 56, GRN, T["daily"]), box(190, 662, 300, 56, GRY, T["review"]),
+        *[box(40 + 205 * i, USE_Y + 16, 190, 56, c, T["use"][i]) for i, c in enumerate((GRY, BLU, BLU)) if "use" in T],
     ])
     lines = "\n".join(f'<path id="{i}" d="M{" L".join(f"{x} {y}" for x, y in p)}" fill="none" stroke="{c}" stroke-width="1"'
                       f'{DASH if dash else ""} marker-end="url(#arrow)"/>' for i, p, c, dash, *_ in PATHS)
-    notes = (f'<text x="640" y="309" text-anchor="end" font-size="11" fill="#185FA5">{T["credit"]}</text>'
+    use = (f'<path d="M40 {USE_Y - 8} H640" stroke="#D3D1C7" stroke-width="0.5" fill="none"/>'
+           f'<text x="40" y="{USE_Y + 8}" font-size="12" fill="#5F5E5A" font-weight="500">{T["use_h"]}</text>') if "use" in T else ""
+    notes = (use + f'<text x="640" y="309" text-anchor="end" font-size="11" fill="#185FA5">{T["credit"]}</text>'
              + "".join(f'<text x="552.5" y="{536 + 15 * i}" text-anchor="middle" font-size="11" fill="#A32D2D">{s}</text>' for i, s in enumerate(T["note"])))
     swatches = [f'fill="{AMB["fill"]}" stroke="{AMB["stroke"]}" stroke-width="0.5"', f'fill="{GRN["fill"]}" stroke="{GRN["stroke"]}" stroke-width="0.5"',
                 f'fill="{BLU["fill"]}" stroke="{BLU["stroke"]}" stroke-width="0.5"', 'fill="none" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3"']
@@ -102,9 +114,9 @@ def scene(T):
     x, legend = 40, ""
     for i, label in enumerate(T["legend"]):
         if i < 4:
-            legend += f'<rect x="{x:.0f}" y="740" width="14" height="14" rx="3" {swatches[i]}/><text x="{x + 22:.0f}" y="752" font-size="12" fill="#444441">{label}</text>'
+            legend += f'<rect x="{x:.0f}" y="{LEGEND_Y}" width="14" height="14" rx="3" {swatches[i]}/><text x="{x + 22:.0f}" y="{LEGEND_Y + 12}" font-size="12" fill="#444441">{label}</text>'
         else:
-            legend += f'<path d="M{x:.0f} 747 H{x + 30:.0f}" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" fill="none"/><text x="{x + 38:.0f}" y="752" font-size="12" fill="#444441">{label}</text>'
+            legend += f'<path d="M{x:.0f} {LEGEND_Y + 7} H{x + 30:.0f}" stroke="#888780" stroke-width="1" stroke-dasharray="4 3" fill="none"/><text x="{x + 38:.0f}" y="{LEGEND_Y + 12}" font-size="12" fill="#444441">{label}</text>'
         x += widths[i] + gap
     head = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W * 2}" height="{H * 2}" viewBox="0 0 {W} {H}" '
             'font-family="PingFang SC, Noto Sans CJK SC, Noto Sans SC, sans-serif">\n'

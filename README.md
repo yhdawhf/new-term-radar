@@ -22,7 +22,7 @@ One example it was built around: [Niko1221/Strata](https://github.com/Niko1221/S
 
 ## What it reads
 
-![How the radar works: four signals, a name judge, the keyword table, a daily report and a 14-day check](docs/radar.en.gif)
+![How the radar works: four signals, a name judge, the keyword table, a daily report and a 14-day check; used from the command line, three Agent Skills or an MCP server](docs/radar.en.gif)
 
 | Signal | What it catches | Needs | Cost |
 |---|---|---|---|
@@ -33,7 +33,7 @@ One example it was built around: [Niko1221/Strata](https://github.com/Niko1221/S
 | ③ New sites | Domains registered and first indexed in the last 90 days that already rank for 20+ keywords | AIsa key | about $0.13 per query, weekly |
 | ④ Search Console | Queries your site got impressions for, for the first time (fresh data) | your own Google token | free |
 | ⑤ Review | Each lead checked in Google Trends 14 days later, against its own baseline; hit rate and days ahead per signal | AIsa key | $0.0012 per search variant |
-| Keyword table | For the day's new names: the generic search terms behind them (what people do with the new thing), each sized and given a decision | AIsa key; GoAnyAPI key optional | about $0.15 a day for 5 names, $0.22 with GoAnyAPI |
+| Keyword table | For the day's new names: the generic search terms behind them (what people do with the new thing), each sized and given a decision | AIsa key; [GoAnyAPI](https://goanyapi.com) key optional | about $0.15 a day for 5 names, $0.22 with GoAnyAPI |
 | Name judge | A small model scores every term: the name of one specific thing, or a common word? | AIsa key | a fraction of a cent per run |
 
 Prices are what AIsa charged in October 2026. With the example config (35 X accounts read three times a day, the keyword table for 5 names a day) a month costs about $15: $10 for the X reads, $5 for the keyword table. Read fewer accounts, or read them once a day, and it drops in proportion.
@@ -98,7 +98,7 @@ Everything the radar needs goes through [AIsa](https://go.aisa.one/yansen-zhu): 
 
 > That link is a referral link: signing up through it supports this project. The radar works the same with a key from anywhere on aisa.one.
 
-**Optional: `GOANYAPI_API_KEY`** ([goanyapi.com](https://goanyapi.com)) improves the keyword table in two ways, for about $0.07 a day: it adds Google Trends' related queries for each name, and it reads the curve of the names and the bigger generic terms (1,000 searches a month or more, eight rows at most) from 30 days of daily data for one country, settled to yesterday. Those rows show the country after "Now", as in `still rising (US)`. Without the key the table is built from the model's phrases and the worldwide series alone. The service is young (first released in August 2026); in our tests calls took 20 to 55 seconds and about one in ten failed, so the radar tries twice, reports a failure in the table and carries on.
+**Optional: `GOANYAPI_API_KEY`** ([goanyapi.com](https://goanyapi.com/r/ga-95708898fb)) improves the keyword table in two ways, for about $0.07 a day: it adds Google Trends' related queries for each name, and it reads the curve of the names and the bigger generic terms (1,000 searches a month or more, eight rows at most) from 30 days of daily data for one country, settled to yesterday. Those rows show the country after "Now", as in `still rising (US)`. Without the key the table is built from the model's phrases and the worldwide series alone. The service is young (first released in August 2026); in our tests calls took 20 to 55 seconds and about one in ten failed, so the radar tries twice, reports a failure in the table and carries on. That link is a referral link too.
 
 Without an AIsa key the free signals still run (Hugging Face, GitHub, sitemaps, Search Console); the report then lists every term unsorted, because nothing judges which are names.
 
@@ -110,7 +110,7 @@ Python 3.10 or newer. The radar uses only the standard library.
 git clone https://github.com/zhuyansen/new-term-radar
 cd new-term-radar
 cp config.example.json config.json      # then edit: your X accounts, sitemaps, topics
-export AISA_API_KEY=...                 # from https://go.aisa.one/yansen-zhu
+export AISA_API_KEY=...                 # from https://go.aisa.one/yansen-zhu; or `aisa login` with the AIsa CLI
 python -m radar daily --out report.md
 ```
 
@@ -197,6 +197,62 @@ python scripts/gsc_auth.py gsc_client.json   # opens a browser once, writes gsc_
 
 `--mail` sends the report through [Resend](https://resend.com). Set `RESEND_API_KEY`, `EMAIL_FROM` (an address on a domain you verified there) and `RADAR_EMAIL_TO` (comma-separated). `pip install markdown` for the HTML version.
 
+## Use it from an agent: skills and an MCP server
+
+### Skills
+
+Three [Agent Skills](https://agentskills.io/home) live in `skills/`: one that does the whole job, and the two halves for those who want them apart.
+
+| Skill | What it does |
+|---|---|
+| `new-term-radar` | The whole run: today's new names, then the keyword priority table for them. Also takes names you already have. Start here |
+| `ai-listening` | Collects what is new in the last 24 hours across the signals, deduplicated, as one report of names |
+| `seo-new-keywords-research` | Takes names, or raw text that mentions them, and returns the keyword priority table: the generic terms behind each name, screened, sized and given a decision |
+
+```bash
+npx skills add zhuyansen/new-term-radar
+```
+
+In Claude Code the three skills also install as a plugin:
+
+```
+/plugin marketplace add zhuyansen/new-term-radar
+/plugin install new-term-radar@new-term-radar
+```
+
+Then ask your agent for "today's new AI keywords", "an AI listening report" or "keyword research on PhotoCraft and SynthID Detector". The skills clone this repository to `~/new-term-radar` if it is not there, tell you the cost before any paid run, and say when a table is incomplete.
+
+### MCP server
+
+For clients that speak MCP (Claude Code, Cursor, Claude Desktop):
+
+```bash
+pip install "new-term-radar[mcp] @ git+https://github.com/zhuyansen/new-term-radar"
+```
+
+```json
+{
+  "mcpServers": {
+    "new-term-radar": {
+      "command": "new-term-radar-mcp",
+      "env": {
+        "AISA_API_KEY": "...",
+        "RADAR_CONFIG": "/absolute/path/to/config.json",
+        "RADAR_STATE": "/absolute/path/to/state"
+      }
+    }
+  }
+}
+```
+
+| Tool | What it returns | Cost and time |
+|---|---|---|
+| `recent_leads` | What the radar kept, with review verdicts and the hit rate per signal | free, instant |
+| `keyword_table` | The keyword table for names you give it | about $0.05 a name plus $0.09 a call; 40 to 90 seconds a name |
+| `run_radar` | One `sources` or `daily` run and its report | paid; minutes. For a first try: the schedule belongs in cron or Actions |
+
+Point `RADAR_STATE` at the directory your scheduled runs write to and `recent_leads` shows their leads. The same two commands exist on the command line: `python -m radar keywords "name" …` and `python -m radar leads`.
+
 ## Run it on GitHub Actions
 
 This fork runs free signals automatically: `sources` at 00:00, 08:00 and 16:00,
@@ -259,3 +315,5 @@ The diagram is drawn by `docs/make_diagram.py` (needs `rsvg-convert` and `ffmpeg
 ## License
 
 MIT. Extracted from the radar that runs daily behind [agentskillshub.top](https://agentskillshub.top).
+
+<!-- mcp-name: io.github.zhuyansen/new-term-radar -->
