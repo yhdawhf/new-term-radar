@@ -58,6 +58,8 @@ sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历�
 
 同步作者 0.4.0 后，Spaces 使用独立快照 `state/hf_spaces_top.json.gz`；首次只建基线，从下一轮起比较变化。免费模式仍不发送“没有新词”的固定提醒。
 
+本次更新触发的[08:08 日报](https://github.com/yhdawhf/new-term-radar/actions/runs/38658232924)已成功读取模型和 Spaces，建立 Spaces 基线；08:08:52 飞书成功发送 19 个候选词（3 条消息），待发为 0，累计成功去重词为 41。修改和验证详情见[本次说明](CHANGES-2026-10-15.zh-CN.md)。
+
 ## 以后开启 AIsa
 
 1. 在仓库 Settings > Secrets and variables > Actions 添加 Secret `AISA_API_KEY`。

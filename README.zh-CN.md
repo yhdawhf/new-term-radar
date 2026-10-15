@@ -287,13 +287,15 @@ pip install "new-term-radar[mcp] @ git+https://github.com/zhuyansen/new-term-rad
 
 这个 fork 已配置免费定时运行：北京时间 00:00、08:00、16:00 执行 `sources`，09:30 执行 `daily`。云端读取已提交的 `config.github.json`；本机 `config.json` 仍被 Git 忽略。更新云端配置或工作流并推送到 `main`，会额外触发一次日报验证。
 
-报告写入 Actions 摘要，详细日志和完整 `state/` 备份作为运行附件保留 30 天，后续任务通过缓存延续历史。首次云端运行会建立自己的基线，本机状态不会自动上传。
+报告和触发信息写入 Actions 摘要，详细日志、`trigger.json` 和完整 `state/` 备份作为运行附件保留 30 天，后续任务通过缓存延续历史。首次云端运行会建立自己的基线，本机状态不会自动上传。免费 sources 同时读取 Hugging Face 模型和 Spaces；每个列表首次只建基线，后续再比较新增。
 
 付费功能明确关闭，添加 Key 本身不会产生付费调用。以后启用时，在仓库 Secrets 添加 `AISA_API_KEY`，并把工作流的 `PAID_ENABLED` 改为 `"true"`；`GOANYAPI_API_KEY` 和 `GSC_TOKEN_JSON` 可选。新站接口继续跳过，邮件发送未启用。暂停运行可在 Actions 的 New-term radar 菜单中选择 Disable workflow。
 
 飞书新词推送：添加仓库 Secret `FEISHU_WEBHOOK_URL`，签名校验开启时再加 `FEISHU_SECRET`。sources 和 daily 会自动推送新候选词及报告链接；没有新词不发消息，同一个词成功发送后不重复推送。失败保留待发队列，在下次任务中重试；报告仍生成，推送失败会让任务显示失败。在 Run workflow 勾选 `test_feishu` 可仅发送一条连接测试。详见 [飞书配置](docs/FEISHU.zh-CN.md)。
 
 详细说明见 [GitHub 运行配置](docs/GITHUB.zh-CN.md)。
+
+本次作者 0.4.0 同步、自动运行和飞书排查结果见 [2026-10-15 修改说明](docs/CHANGES-2026-10-15.zh-CN.md)。
 
 ## 各部分怎么判断
 

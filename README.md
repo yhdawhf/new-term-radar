@@ -295,7 +295,7 @@ and `daily` at 09:30 (Asia/Shanghai). It reads the committed `config.github.json
 local `config.json` stays ignored. Pushing changes to that config or the radar workflow
 on `main` also triggers a daily validation run.
 
-Reports appear in the Actions summary. Detailed logs and the complete state directory
+Reports and trigger details appear in the Actions summary. Detailed logs, `trigger.json` and the complete state directory
 are retained as artifacts for 30 days; the cache carries history between runs.
 The first cloud run establishes its own baseline, independently of local state.
 
@@ -311,6 +311,8 @@ candidate terms, with report links. A persistent outbox deduplicates successful
 deliveries and retries failed ones on the next run. Reports are still generated on
 notification failure, but the run fails visibly. Select `test_feishu` in Run workflow
 to send only one connection test. See [the Feishu guide (Chinese)](docs/FEISHU.zh-CN.md).
+
+See the [2026-10-15 update notes (Chinese)](docs/CHANGES-2026-10-15.zh-CN.md) for the 0.4.0 sync and verified schedule/notification results.
 
 ## How the pieces decide
 
