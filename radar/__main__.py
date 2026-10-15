@@ -9,12 +9,15 @@ Signals:
   ② breakout  one new GitHub repo taking off on its own
   ③ sitemaps  pages other sites added since the last run
   ③ newsites  domains registered in the last 90 days that already rank (weekly; AIsa)
+  ⑥ revenue   products people pay for, growing fastest or newly listed (weekly; TrustMRR key)
+  ⑦ asks      what people ask for on Reddit ("is there an AI tool that…"), sized (weekly; AIsa)
   ④ gsc       queries your own site got impressions for, for the first time (optional)
   ⑤ review    leads from 14 days ago checked in Google Trends; hit rate per signal (AIsa)
   usecases    the generic terms behind today's names, sized against a benchmark keyword (AIsa)
 
   python -m radar keywords "name one" "name two" [--repo "name one=owner/repo"] [--json]
   python -m radar leads    [--days 7] [--json]
+  python -m radar pains    "keyword" [--extension ID] [--json]   what people complain about for a kind of tool
   python -m radar mcp      the MCP server on stdio (needs the `mcp` package)
 
 `keywords` builds the keyword table for names you give it, now (about $0.05 a name plus
@@ -37,11 +40,11 @@ import time
 from datetime import date
 from pathlib import Path
 
-from . import breakout, config, feishu, gsc, new_sites, notify, report, review, sitemaps, sources, store, usecases
+from . import asks, breakout, config, feishu, gsc, new_sites, notify, pains, report, review, revenue, sitemaps, sources, store, usecases
 from .i18n import t
 from .diagnostics import configure, log, result
 
-SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "gsc", "review", "judge", "usecases"}
+SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "revenue", "asks", "gsc", "review", "judge", "usecases", "tutorials"}
 
 
 def run(fn, skip: bool = False, label: str = "step", reason: str = "--skip") -> dict:
@@ -107,19 +110,27 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
         "sitemap": run(lambda: sitemaps.diff(cfg, state), "sitemaps" in args.skip, "Sitemap"),
         "newsite": run(lambda: new_sites.new_sites(cfg, state), "newsites" in args.skip or not weekly,
                        "新站", "--skip" if "newsites" in args.skip else "未到配置的每周运行日"),
+        "revenue": run(lambda: revenue.products(cfg, state), "revenue" in args.skip or not (
+            args.revenue or date.today().weekday() == cfg["revenue"]["weekday"]), "营收产品"),
+        "ask": run(lambda: asks.asks(cfg, state), "asks" in args.skip or not (
+            args.asks or date.today().weekday() == cfg["asks"]["weekday"]), "Reddit 需求"),
     }
     found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip, "Search Console")
     lead, judged = _leads(cfg, blocks)
     conn = store.connect(state)
     extra = {"judge": judged, "record": run(lambda: {"recorded": store.record(conn, report.to_record(cfg, lead))}, label="SQLite 入库")}
     extra["feishu"] = run(lambda: feishu.notify(state, report.to_record(cfg, lead)), label="飞书新词推送")
+    # What the viewers of a widely shared walkthrough ask for: the one-click tool behind a ⚡ lead.
+    extra["tutorials"] = run(lambda: pains.tutorial_asks(cfg, report.named(cfg, lead)),
+                             "tutorials" in args.skip or not cfg["tutorials"]["max_leads"], "教程需求")
     # With ① run apart, the daily report lists what that job kept since yesterday.
     extra["recent_sources"] = run(lambda: {"rows": store.recent_sources(conn)}, not {"x", "hf"} <= args.skip,
                                   "读取独立 sources 任务线索", "只有同时跳过 x,hf 才读取")
     # The names to read for their generic terms: things, not words that surged (usecases.names_to_read).
     names = usecases.names_to_read(report.to_record(cfg, lead), extra["recent_sources"].get("rows", []))
     repos = {r["term"]: r["repo"] for r in lead if r.get("repo")}
-    extra["usecases"] = run(lambda: usecases.run(cfg, state, list(dict.fromkeys(names)), repos),
+    about = {r["term"]: r["about"] for r in lead if r.get("about")}
+    extra["usecases"] = run(lambda: usecases.run(cfg, state, list(dict.fromkeys(names)), repos, texts=about),
                             "usecases" in args.skip or not cfg["usecases"]["per_day"],
                             "关键词表", "--skip" if "usecases" in args.skip else "配置的 per_day 为 0")
     run(lambda: {"recorded": store.record(conn, report.usecase_leads(extra["usecases"]))}, label="关键词 SQLite 入库")
@@ -150,6 +161,18 @@ def cmd_keywords(args, cfg: dict, state: Path) -> int:
     repos = dict(r.split("=", 1) for r in args.repo)
     uc, text = keyword_table(cfg, state, args.names, repos)
     out = json.dumps(uc, ensure_ascii=False, indent=1, default=str) if args.json else text
+    if args.out:
+        Path(args.out).write_text(out)
+    print(out)
+    return 0
+
+
+def cmd_pains(args, cfg: dict) -> int:
+    keyword = " ".join(args.names).strip()
+    if not keyword:
+        raise SystemExit('pains: give a keyword, e.g. python -m radar pains "ai headshot"')
+    result = pains.run(cfg, keyword, args.extension)
+    out = json.dumps(result, ensure_ascii=False, indent=1, default=str) if args.json else report.pains(result)
     if args.out:
         Path(args.out).write_text(out)
     print(out)
@@ -187,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         return serve_mcp()
     prog = "python -m radar" if __package__ == "radar" else "new-term-radar"  # installed, the package has another name
     p = argparse.ArgumentParser(prog=prog, description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("command", choices=["daily", "sources", "keywords", "leads"])
+    p.add_argument("command", choices=["daily", "sources", "keywords", "leads", "pains"])
     p.add_argument("names", nargs="*", help="for `keywords`: the names to read")
     p.add_argument("--repo", action="append", default=[], metavar="NAME=OWNER/REPO", help="for `keywords`: a name's GitHub repository")
     p.add_argument("--days", type=int, default=7, help="for `leads`: how far back")
@@ -197,6 +220,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", help="write the report (Markdown) here; `daily` also writes a .json beside it")
     p.add_argument("--skip", default="", help="comma-separated: " + ",".join(sorted(SKIPPABLE)))
     p.add_argument("--new-sites", action="store_true", help="run the weekly new-site signal today")
+    p.add_argument("--revenue", action="store_true", help="run the weekly revenue signal today (needs TRUSTMRR_API_KEY)")
+    p.add_argument("--asks", action="store_true", help="run the weekly Reddit asks signal today")
+    p.add_argument("--extension", action="append", default=[], metavar="ID", help="for `pains`: a Chrome extension to read the reviews of")
     p.add_argument("--mail", action="store_true", help="mail the report (see radar/notify.py)")
     p.add_argument("--verbose", action="store_true", help="print execution details to stderr")
     p.add_argument("--log-file", help="also save execution details as UTF-8 text (append)")
@@ -221,6 +247,8 @@ def main(argv: list[str] | None = None) -> int:
         state.mkdir(parents=True, exist_ok=True)
         if args.command == "keywords":
             code = cmd_keywords(args, cfg, state)
+        elif args.command == "pains":
+            code = cmd_pains(args, cfg)
         else:
             code = cmd_sources(args, cfg, state) if args.command == "sources" else cmd_daily(args, cfg, state)
     log.info("[结束] exit=%d，总耗时 %.2fs；单个信号的失败见上述日志及报告状态。", code, time.monotonic() - started)

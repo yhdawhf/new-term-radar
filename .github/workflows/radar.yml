@@ -1,7 +1,7 @@
 name: New-term radar
 
 # Two schedules, one state:
-#   sources  every 8 hours: X and Hugging Face, where a name is said first. Posts a
+#   sources  every 8 hours: X and Hugging Face models/Spaces. Posts a
 #            report only when there is a new name.
 #   daily    once a day: everything else, the review of leads from 14 days ago, and the
 #            source leads of the last day.
@@ -65,6 +65,32 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Record trigger details
+        env:
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          context = {
+              "event": os.environ["GITHUB_EVENT_NAME"],
+              "cron": os.environ.get("SCHEDULE_CRON", ""),
+              "command": os.environ["COMMAND"],
+              "started_at": datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(),
+              "commit": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+          }
+          text = json.dumps(context, ensure_ascii=False, indent=2)
+          Path("trigger.json").write_text(text + "\n", encoding="utf-8")
+          print(text)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## 本次触发信息\n\n```json\n" + text + "\n```\n\n")
+          PY
+
       - run: pip install -r requirements.txt
 
       - name: Restore the state
@@ -96,18 +122,18 @@ jobs:
           # Keep new-site queries off until the upstream parameter issue is verified.
           skip=(newsites)
           if [[ "$PAID_ENABLED" != "true" || -z "$AISA_API_KEY" ]]; then
-            skip+=(x judge review usecases)
+            skip+=(x judge review usecases revenue asks tutorials)
             # Also prevent optional keys from activating any paid integration.
-            unset AISA_API_KEY GOANYAPI_API_KEY
-            echo "运行模式：免费信号（Hugging Face、GitHub、sitemap）"
+            unset AISA_API_KEY GOANYAPI_API_KEY TRUSTMRR_API_KEY
+            echo "运行模式：免费信号（Hugging Face 模型/Spaces、GitHub、sitemap）"
           else
             echo "运行模式：已启用 AIsa 付费功能"
           fi
           case "$COMMAND" in
             daily)
               skip+=(x)
-              # On a fresh cloud state, initialise HF too; later daily runs reuse sources.
-              if [[ -f state/hf_top.json.gz ]]; then skip+=(hf); fi
+              # Initialise both lists on a fresh state or when upgrading to Spaces support.
+              if [[ -f state/hf_top.json.gz && -f state/hf_spaces_top.json.gz ]]; then skip+=(hf); fi
               ;;
             sources) ;;
             *) echo "Unsupported command: $COMMAND" >&2; exit 2 ;;
@@ -145,6 +171,7 @@ jobs:
             report.json
             run.log
             feishu-test.log
+            trigger.json
             state/
           if-no-files-found: ignore
           retention-days: 30

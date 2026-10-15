@@ -6,20 +6,20 @@
 
 | 任务 | 北京时间 | 内容 |
 |---|---|---|
-| sources | 每天 00:00、08:00、16:00 | Hugging Face 热门模型的变化 |
+| sources | 每天 00:00、08:00、16:00 | Hugging Face 热门模型和 Spaces 的变化 |
 | daily | 每天 09:30 | GitHub 爆发、Glama sitemap 变化和最近的 sources 线索 |
 
 GitHub 定时触发可能延后，时间不是准点保证。云端进程使用 `TZ=Asia/Shanghai`，日期、每周判断和日志时间按北京时间计算。
 
 工作流显示 `active` 或手动运行成功，都不能证明定时触发已经生效。查看 Actions 运行记录的事件类型：`schedule` 才是自动定时，`workflow_dispatch` 是手动，`push` 是配置提交触发。Fork 后应检查并启用定时工作流；GitHub 的规则见[官方说明](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows)。
 
-提交到 main 的工作流或 `config.github.json` 发生变化时，会额外执行一次日报。也可在 Actions > New-term radar > Run workflow 选择 `daily` 或 `sources` 手动执行。首次日报若尚无 HF 快照，会顺便建立 HF 基线；后续日报复用 sources 保存的线索。
+提交到 main 的工作流或 `config.github.json` 发生变化时，会额外执行一次日报。也可在 Actions > New-term radar > Run workflow 选择 `daily` 或 `sources` 手动执行。日报若缺少模型或 Spaces 任一快照，会顺便建立对应基线；后续日报复用 sources 保存的线索。
 
-每次运行页面的 Summary 显示报告；Artifacts 中包含 `report.md`、日报的 `report.json`、`run.log`、完整 `state/`（SQLite 和 gzip 快照）。没有新名字的 sources 不生成报告，但仍保存日志和状态。
+每次运行页面的 Summary 先显示触发事件、cron、实际开始时间、命令和代码提交，再显示报告；Artifacts 中包含 `trigger.json`、`report.md`、日报的 `report.json`、`run.log`、完整 `state/`（SQLite 和 gzip 快照）。没有新名字的 sources 不生成报告，但仍保存触发信息、日志和状态。
 
 ## 当前为免费模式
 
-`PAID_ENABLED` 明确设为字符串 `"false"`。即使仓库已有 API Key，运行步骤也会清除进程中的 AIsa/GoAnyAPI Key，并跳过 `x,judge,review,usecases,newsites`。所以无需添加 Secret 即可开始本次配置的信号采集。
+`PAID_ENABLED` 明确设为字符串 `"false"`。即使仓库已有 API Key，运行步骤也会清除进程中的 AIsa/GoAnyAPI/TrustMRR Key，并跳过 `x,judge,review,usecases,newsites,revenue,asks,tutorials`。所以无需添加付费数据 Key 即可采集模型、Spaces、GitHub 和已配置的 sitemap。
 
 `config.github.json` 仅包含公开的关注账号、站点和筛选规则，不含凭证。它继承了本机已验证的中文配置，sitemap 仅启用 Glama。编辑该文件可以修改云端关注方向；本机 `config.json` 继续独立使用，不会被提交。
 
@@ -41,7 +41,22 @@ sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历�
 
 14:40 的手动 sources 又发现 `lfm2.5` 和 `drama 3`，飞书成功推送 2 个候选，待发为 0。详见[该次运行](https://github.com/yhdawhf/new-term-radar/actions/runs/38523620223)。这些是实际发送结果；是否在客户端看到消息，还需查看机器人所在群聊。
 
-重新启用后，临时增加过每 5 分钟的检查规则。到 14:49 仍没有观察到 `schedule` 运行，随后删除临时规则，保留上述正式时间表。自动触发是否恢复仍待真实定时运行确认；后台未触发的具体原因尚未确定，不能仅凭工作流 `active` 状态判定恢复成功。
+重新启用后，临时增加过每 5 分钟的检查规则。到 14:49 仍没有观察到 `schedule` 运行，随后删除临时规则，保留上述正式时间表。截至当时自动触发尚未得到验证；后续验证见下面 10 月 15 日记录。
+
+## 2026-10-15 已验证的自动运行
+
+已出现两次真实 `schedule` 事件，均成功：
+
+| 实际开始时间（北京时间） | 任务 | HF 模型 | 新候选 | 飞书 sent / queued / pending |
+|---|---|---|---|---|
+| 10 月 14 日 21:16:49 | sources | 100 | 0 | 0 / 0 / 0 |
+| 10 月 15 日 03:56:33 | sources | 100 | 0 | 0 / 0 / 0 |
+
+运行链接：[昨晚](https://github.com/yhdawhf/new-term-radar/actions/runs/38570443688)、[凌晨](https://github.com/yhdawhf/new-term-radar/actions/runs/38627845810)。这两轮没有新消息的原因是没有新候选，且没有待发重试，不能再归为没有自动运行。此前已成功发送的 22 个词仍保留在去重状态中。
+
+实际时间与设定时间存在偏移；旧日志没有记录触发用的 cron，无法逐轮确认是哪个定时点延后。本次增加 `trigger.json` 及 Summary 触发信息，后续可直接核对。GitHub 官方说明定时事件可能延迟，负载高时可能丢弃队列，见[调度说明](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)。
+
+同步作者 0.4.0 后，Spaces 使用独立快照 `state/hf_spaces_top.json.gz`；首次只建基线，从下一轮起比较变化。免费模式仍不发送“没有新词”的固定提醒。
 
 ## 以后开启 AIsa
 

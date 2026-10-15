@@ -62,8 +62,9 @@ def test_daily_keywords_keep_recent_names_report_storage_and_logs(tmp_path, monk
                      "brand": False, "evidence": "Runs locally", "volume": 1000,
                      "no_data": True, "decision": "watch"}]}
 
-    def build_keywords(cfg, state, names, repos):
+    def build_keywords(cfg, state, names, repos, *, texts=None):
         assert names == ["qwen3.9"]
+        assert texts == {}
         return keywords
 
     monkeypatch.setattr(cli.usecases, "run", build_keywords)
@@ -76,5 +77,32 @@ def test_daily_keywords_keep_recent_names_report_storage_and_logs(tmp_path, monk
         with cli.store.connect(state) as conn:
             assert conn.execute("SELECT signals FROM leads WHERE term = ?", ("local ai model",)).fetchone() == ('["usecase"]',)
         assert "[关键词 SQLite 入库] 完成 {'recorded': 1}" in trace.read_text()
+    finally:
+        configure(False)
+
+
+def test_free_daily_skips_new_paid_features_even_with_keys_and_forced_weekly_flags(tmp_path, monkeypatch):
+    monkeypatch.setenv("AISA_API_KEY", "test-not-a-real-key")
+    monkeypatch.setenv("TRUSTMRR_API_KEY", "test-not-a-real-key")
+    called = []
+
+    def paid_call(*args, **kwargs):
+        called.append(True)
+        raise AssertionError("free daily must not call paid integrations")
+
+    monkeypatch.setattr(cli.asks, "asks", paid_call)
+    monkeypatch.setattr(cli.revenue, "products", paid_call)
+    monkeypatch.setattr(cli.pains, "tutorial_asks", paid_call)
+    monkeypatch.setattr(cli.usecases, "run", paid_call)
+    cfg, out, trace = tmp_path / "config.json", tmp_path / "report.md", tmp_path / "run.log"
+    cfg.write_text("{}")
+    try:
+        assert cli.main(["daily", "--config", str(cfg), "--state", str(tmp_path / "state"),
+                         "--out", str(out), "--log-file", str(trace), "--asks", "--revenue", "--skip",
+                         "x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases,revenue,asks,tutorials"]) == 0
+        assert called == []
+        data = json.loads(out.with_suffix(".json").read_text())
+        assert data["ask"]["skipped"] and data["revenue"]["skipped"] and data["keywords"]["skipped"]
+        assert "[教程需求] 跳过" in trace.read_text()
     finally:
         configure(False)

@@ -35,12 +35,16 @@ RETRY_PAUSE = 10
 MIN_URLS = 3
 TOP = 25
 DEFAULT_PAUSE = 3
-_LOCALE = r"^(https?://[^/]+)/[a-z]{2}(?:-[A-Za-z]{2,4})?(?=/)"
-_LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>")
+# A leading path segment that is a language code (/de/, /zh-CN/, /pt_BR/). Only real codes: a slug
+# like /ai-blog/ or /rf-detr/ is a page, not a locale.
+LANGS = ("en|zh|tw|ja|ko|fr|de|es|pt|it|ru|ar|tr|vi|th|id|nl|pl|sv|da|fi|no|nb|cs|hu|ro|uk|el|he|hi|ms|fa|bn|"
+         "ur|ta|te|sk|bg|hr|sr|sl|lt|lv|et|ca|tl|fil|sw")
+_LOCALE = rf"^(https?://[^/]+)/(?:{LANGS})(?:[-_][A-Za-z]{{2,4}})?(?=/)"
+_LOC = re.compile(r"<loc>\s*(?:<!\[CDATA\[)?\s*([^<\s\]]+)\s*(?:\]\]>)?\s*</loc>")
 
 
 def fetch(url: str) -> str:
-    req = urllib.request.Request(url.replace("&amp;", "&"), headers={"User-Agent": UA})
+    req = urllib.request.Request(url.replace("&amp;", "&"), headers={"User-Agent": UA, "Accept-Encoding": "gzip"})
     for attempt in range(RETRIES):
         log.debug("[Sitemap 请求] GET %s 尝试=%d/%d", url, attempt + 1, RETRIES)
         try:
@@ -93,13 +97,15 @@ def diff(cfg: dict, state: Path) -> dict:
             report[site] = {"error": str(exc)[:120]}
             log.warning("[Sitemap/%s] 失败，保留旧快照：%s", site, report[site]["error"])
             continue
+        if not now:     # blocked, empty or a format the reader misses: say so rather than wait forever
+            report[site] = {"error": "no URLs read"}
+            continue
         new = sorted(now - old) if old is not None else []
         report[site] = {"urls": len(now), "new": len(new), "first_run": old is None, "sample": new[:8]}
         log.info("[Sitemap/%s] 旧网址=%s，当前=%d，新增=%d", site, len(old) if old is not None else "无快照", len(now), len(new))
         recent += [(u, slug_text(u)) for u in new]
         baseline += [(u, slug_text(u)) for u in (old or set())]
-        if now:   # an empty answer (blocked, broken) keeps the old snapshot
-            snap.save(path, sorted(now))
+        snap.save(path, sorted(now))
     ratio = len(recent) / max(len(baseline), 1)
     log.info("[Sitemap 词频] 新网址=%d，基线网址=%d，比例=%.6f；至少%d个不同新网址共现，lift=新频次/(旧频次×比例+1)",
              len(recent), len(baseline), ratio, MIN_URLS)

@@ -1,6 +1,6 @@
 # 飞书新词推送
 
-GitHub 定时任务发现新的候选词时，向飞书群自定义机器人发送文本消息。没有新词时不打扰；不依赖 Mac 开机，也不需要 AIsa Key。当前免费模式下推送 Hugging Face、GitHub 和 sitemap 产生的候选词。
+GitHub 定时任务发现新的候选词时，向飞书群自定义机器人发送文本消息。没有新词时不打扰；不依赖 Mac 开机，也不需要 AIsa Key。当前免费模式下推送 Hugging Face 模型/Spaces、GitHub 和 sitemap 产生的候选词。
 
 ## 配置
 
@@ -58,5 +58,7 @@ https://github.com/.../actions/runs/...
 ## 错误定位
 
 长期没有消息时，先在 Actions 检查最近一次真实采集和 `schedule` 事件记录。连接测试成功只证明机器人能收消息；如果定时采集根本没有执行，也不会发现并推送新词。日报 JSON 的 `notifications.sent` 是已成功发送的词数，消息按每批最多 8 个词拆分，`pending` 为未发队列长度。
+
+2026-10-14 晚上和 10 月 15 日凌晨的两次自动 sources 已核实正常：HF 差分候选为 0，飞书 sent/queued/pending 均为 0，因此没有新消息。更新后的 Summary 和附件 `trigger.json` 可查看自动/手动/提交触发及实际开始时间。若日志显示已成功发送，但群内找不到消息，应核对 Secret 对应的机器人所在群及客户端消息设置；API 接受不等于客户端已经显示。
 
 运行日志仅记录 HTTP 状态或飞书错误码，不输出 Webhook、密钥或原始错误响应。常见签名/关键词等错误应结合官方文档和机器人设置检查。需要补填签名密钥时，用 `FEISHU_SECRET` Secret，填好后再运行一次连接测试即可。

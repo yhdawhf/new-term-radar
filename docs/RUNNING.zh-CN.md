@@ -11,11 +11,13 @@
 ```bash
 .venv/bin/python -m radar daily \
   --config config.json --state state --out report.md \
-  --skip x,newsites,judge,usecases,review \
+  --skip x,newsites,judge,usecases,review,revenue,asks,tutorials \
   --verbose --log-file state/run.log
 ```
 
-本机 `config.json` 使用示例配置，报告语言改为 `zh`，sitemap 仅启用 Glama。保留示例 X 账号和主题，供以后调整，但免费运行时跳过 X。上面的命令跳过 X、新站、模型判断、付费关键词表和 Trends 复盘；Search Console 未配置。
+本机 `config.json` 使用示例配置，报告语言改为 `zh`，sitemap 仅启用 Glama。保留示例 X 账号和主题，供以后调整，但免费运行时跳过 X。上面的命令跳过 X、新站、模型判断、付费关键词表、Trends 复盘、营收、Reddit 需求及教程需求；Search Console 未配置。2026-10-15 同步至作者 0.4.0，115 项测试通过；免费 sources 读取 100 个模型和 100 个 Spaces，模型无新增，Spaces 首次建基线，退出码为 0。
+
+作者 0.4.0 新增 `python -m radar pains "关键词"`，以及营收、Reddit 需求、搜索首页竞争和教程需求分析。这些需要相应 Key 或付费请求，未在免费定时任务中开启。模型与 Spaces 分别保存快照，首次新增一种列表时，只为该列表建立基线，不把现有热门项目伪装成新发现。
 
 作者 0.2.1 增加了以下入口：`python -m radar leads --days 7` 免费读取本地历史；`python -m radar keywords "名字"` 主动查询付费关键词表；`python -m radar mcp` 启动 stdio MCP 服务。MCP 的 `recent_leads` 只读取本地历史，`keyword_table` 和 `run_radar` 可能调用付费接口，不因安装而自动执行。作者上游仍保留在 `upstream`，自己的远程为 `origin`；不要用覆盖目录的方式更新，以免丢失飞书和日志改动。
 

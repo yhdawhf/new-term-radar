@@ -125,31 +125,62 @@ def base_name(model_id: str) -> str:
     return re.sub(r"[-_]+", " ", name).strip().lower()
 
 
-def hf_new(cfg: dict, state: Path) -> dict:
-    log.info("[Hugging Face] 获取热门前%d；当前前%d与上次前%d的模型 ID 比较，再清洗量化/微调后缀", HF_FETCH, HF_TOP, HF_FETCH)
-    req = urllib.request.Request(f"https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit={HF_FETCH}",
+SPACE_NOISE = {"demo", "webgpu", "studio", "space", "spaces", "playground", "gradio", "app", "online", "zerogpu", "gpu", "chat"}
+
+
+def _trending(what: str) -> list[dict]:
+    log.info("[Hugging Face/%s] 获取热门前%d；当前前%d与上次前%d的 ID 比较", what, HF_FETCH, HF_TOP, HF_FETCH)
+    req = urllib.request.Request(f"https://huggingface.co/api/{what}?sort=trendingScore&direction=-1&limit={HF_FETCH}",
                                  headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=40) as res:
-        models = json.load(res)
-    path = state / "hf_top.json.gz"
-    before = snap.load(path)
-    if models:
-        snap.save(path, [m["id"] for m in models])
-    if before is None:
-        return {"models": len(models), "first_run": True, "terms": []}
+        return json.load(res)
+
+
+def _entered(items: list[dict], before: list[str], what: str) -> list[dict]:
+    """The terms of the items that entered the top HF_TOP since the last run, grouped by base name."""
     seen = set(before)
     grouped: dict[str, dict] = {}
-    for rank, m in enumerate(models[:HF_TOP], 1):
+    for rank, m in enumerate(items[:HF_TOP], 1):
         if m["id"] in seen:
             continue
         term = base_name(m["id"])
+        if what == "spaces":            # a demo's name minus the demo words: 'lightonocr 3 demo' -> 'lightonocr 3'
+            term = " ".join(w for w in term.split() if w not in SPACE_NOISE)
         if not term or term in STOP:
             continue
         g = grouped.setdefault(term, {"term": term, "rank": rank, "copies": 0, "examples": []})
         g["copies"] += 1
-        g["examples"].append(f"{m['id']} ({m.get('pipeline_tag') or '?'}, ♥{m.get('likes', 0)})")
+        g["examples"].append(f"{m['id']} ({m.get('pipeline_tag') or m.get('sdk') or '?'}, ♥{m.get('likes', 0)})")
     rows = sorted(grouped.values(), key=lambda g: g["rank"])
     for g in rows:
         g["recent"] = g["copies"]
-        g["note"] = t("note_hf", rank=g["rank"]) + (t("note_hf_copies", n=g["copies"]) if g["copies"] > 1 else "")
-    return {"models": len(models), "first_run": False, "terms": rows[:TOP]}
+        g["note"] = t("note_hf" if what == "models" else "note_hf_space", rank=g["rank"]) + \
+            (t("note_hf_copies", n=g["copies"]) if g["copies"] > 1 else "")
+    return rows
+
+
+def hf_new(cfg: dict, state: Path) -> dict:
+    """Models, and Spaces (the demos people try), that entered Hugging Face's trending top HF_TOP since
+    the last run. One public request each; each list keeps its own snapshot."""
+    out = {"first_run": False, "terms": []}
+    for what, file in (("models", "hf_top.json.gz"), ("spaces", "hf_spaces_top.json.gz")):
+        items = _trending(what)
+        path = state / file
+        before = snap.load(path)
+        if items:
+            snap.save(path, [m["id"] for m in items])
+        out[what] = len(items)
+        if before is None:
+            log.info("[Hugging Face/%s] 当前=%d；首次建立快照，本列表不产生差分候选", what, len(items))
+            out["first_run"] = True
+            continue
+        entered = _entered(items, before, what)
+        log.info("[Hugging Face/%s] 当前=%d，历史=%d，差分候选=%d", what, len(items), len(before), len(entered))
+        have = {r["term"]: r for r in out["terms"]}
+        for r in entered:
+            if r["term"] in have:       # a model and its demo both new: one lead, both examples
+                have[r["term"]]["examples"] += r["examples"]
+            else:
+                out["terms"].append(r)
+    out["terms"] = out["terms"][:TOP]
+    return out
