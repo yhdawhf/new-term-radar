@@ -19,7 +19,7 @@ GitHub 定时触发可能延后，时间不是准点保证。云端进程使用 
 
 ## 当前为免费模式
 
-`PAID_ENABLED` 明确设为字符串 `"false"`。即使仓库已有 API Key，运行步骤也会清除进程中的 AIsa/GoAnyAPI/TrustMRR Key，并跳过 `x,judge,review,usecases,newsites,revenue,asks,tutorials`。所以无需添加付费数据 Key 即可采集模型、Spaces、GitHub 和已配置的 sitemap。
+`PAID_ENABLED` 明确设为字符串 `"false"`。即使仓库已有 API Key，运行步骤也会清除进程中的 AIsa/GoAnyAPI/TrustMRR Key，并跳过 `x,judge,review,usecases,newsites,revenue,asks,tutorials,sellers`。所以无需添加付费数据 Key 即可采集模型、Spaces、GitHub 和已配置的 sitemap。
 
 `config.github.json` 仅包含公开的关注账号、站点和筛选规则，不含凭证。它继承了本机已验证的中文配置，sitemap 仅启用 Glama。编辑该文件可以修改云端关注方向；本机 `config.json` 继续独立使用，不会被提交。
 
@@ -59,6 +59,14 @@ sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历�
 同步作者 0.4.0 后，Spaces 使用独立快照 `state/hf_spaces_top.json.gz`；首次只建基线，从下一轮起比较变化。免费模式仍不发送“没有新词”的固定提醒。
 
 本次更新触发的[08:08 日报](https://github.com/yhdawhf/new-term-radar/actions/runs/38658232924)已成功读取模型和 Spaces，建立 Spaces 基线；08:08:52 飞书成功发送 19 个候选词（3 条消息），待发为 0，累计成功去重词为 41。修改和验证详情见[本次说明](CHANGES-2026-10-15.zh-CN.md)。
+
+## 2026-10-21 同步与推送核对
+
+已合并作者 0.5.0 的新收款站点 `sellers`、历史查询 `history`、插件 MCP 配置及文档更新。免费定时任务显式跳过 sellers，未调用历史拉取或分类等付费操作；现有计划时间、状态缓存和飞书去重不变。
+
+截至本次更新前，已核实 26 次真实 `schedule` 事件。最近一次日报的 trigger 记录 `cron=30 1 * * *、command=daily`，实际 10 月 20 日 14:20 开始；飞书 API 在 14:21:20 接受 17 个词。最近一次 sources 记录 `cron=0 */8 * * *`，10 月 21 日 03:48:21 接受 2 个词，待发均为 0。实际时间有明显偏移，计划不等于准点执行。
+
+用户反馈机器人群内仍无新消息。本次排查已定位为“已有候选和 API 接受记录，但用户目标群未见”，群归属需要按[飞书核对步骤](FEISHU.zh-CN.md)确认；不能再使用“没有采集”或“没有新词”解释。详情见[本次修改说明](CHANGES-2026-10-21.zh-CN.md)。
 
 ## 以后开启 AIsa
 

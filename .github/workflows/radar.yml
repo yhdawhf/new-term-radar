@@ -122,7 +122,7 @@ jobs:
           # Keep new-site queries off until the upstream parameter issue is verified.
           skip=(newsites)
           if [[ "$PAID_ENABLED" != "true" || -z "$AISA_API_KEY" ]]; then
-            skip+=(x judge review usecases revenue asks tutorials)
+            skip+=(x judge review usecases revenue asks tutorials sellers)
             # Also prevent optional keys from activating any paid integration.
             unset AISA_API_KEY GOANYAPI_API_KEY TRUSTMRR_API_KEY
             echo "运行模式：免费信号（Hugging Face 模型/Spaces、GitHub、sitemap）"

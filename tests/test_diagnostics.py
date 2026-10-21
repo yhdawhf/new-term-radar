@@ -92,17 +92,19 @@ def test_free_daily_skips_new_paid_features_even_with_keys_and_forced_weekly_fla
 
     monkeypatch.setattr(cli.asks, "asks", paid_call)
     monkeypatch.setattr(cli.revenue, "products", paid_call)
+    monkeypatch.setattr(cli.sellers, "sellers", paid_call)
     monkeypatch.setattr(cli.pains, "tutorial_asks", paid_call)
     monkeypatch.setattr(cli.usecases, "run", paid_call)
     cfg, out, trace = tmp_path / "config.json", tmp_path / "report.md", tmp_path / "run.log"
     cfg.write_text("{}")
     try:
         assert cli.main(["daily", "--config", str(cfg), "--state", str(tmp_path / "state"),
-                         "--out", str(out), "--log-file", str(trace), "--asks", "--revenue", "--skip",
-                         "x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases,revenue,asks,tutorials"]) == 0
+                         "--out", str(out), "--log-file", str(trace), "--asks", "--revenue", "--sellers", "--skip",
+                         "x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases,revenue,asks,tutorials,sellers"]) == 0
         assert called == []
         data = json.loads(out.with_suffix(".json").read_text())
         assert data["ask"]["skipped"] and data["revenue"]["skipped"] and data["keywords"]["skipped"]
+        assert data["seller"]["skipped"]
         assert "[教程需求] 跳过" in trace.read_text()
     finally:
         configure(False)

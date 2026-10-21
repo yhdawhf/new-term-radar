@@ -15,7 +15,9 @@ import re
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from . import UA, snap
 
@@ -154,7 +156,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Send one Feishu connection test; no radar collection.")
     parser.add_argument("--test", action="store_true", required=True)
     parser.parse_args()
-    text = "新词雷达：飞书连接测试成功。\n今后仅发现新候选词时推送，没有新词时保持安静。"
+    now = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+    text = f"新词雷达：飞书连接核对。\n测试时间：{now}（北京时间）\n这是一条连接测试，不是新词报告。"
+    text += "\n今后仅发现新候选词时推送，没有新词时保持安静。"
     if report_url():
         text += "\n测试运行：" + report_url()
     try:

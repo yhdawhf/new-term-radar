@@ -11,6 +11,7 @@ Signals:
   ③ newsites  domains registered in the last 90 days that already rank (weekly; AIsa)
   ⑥ revenue   products people pay for, growing fastest or newly listed (weekly; TrustMRR key)
   ⑦ asks      what people ask for on Reddit ("is there an AI tool that…"), sized (weekly; AIsa)
+  ⑧ sellers   sites that just put up a payment link: Stripe, Polar, Lemon Squeezy, Gumroad, Creem (weekly; AIsa)
   ④ gsc       queries your own site got impressions for, for the first time (optional)
   ⑤ review    leads from 14 days ago checked in Google Trends; hit rate per signal (AIsa)
   usecases    the generic terms behind today's names, sized against a benchmark keyword (AIsa)
@@ -18,6 +19,8 @@ Signals:
   python -m radar keywords "name one" "name two" [--repo "name one=owner/repo"] [--json]
   python -m radar leads    [--days 7] [--json]
   python -m radar pains    "keyword" [--extension ID] [--json]   what people complain about for a kind of tool
+  python -m radar history  [pull|read|sort] [--platform stripe] [--max-usd 20] [--out sellers.csv]
+                           every seller on the payment platforms of ⑧, back to 2019 (about $18 for all; see radar/seller_history.py)
   python -m radar mcp      the MCP server on stdio (needs the `mcp` package)
 
 `keywords` builds the keyword table for names you give it, now (about $0.05 a name plus
@@ -40,11 +43,11 @@ import time
 from datetime import date
 from pathlib import Path
 
-from . import asks, breakout, config, feishu, gsc, new_sites, notify, pains, report, review, revenue, sitemaps, sources, store, usecases
+from . import asks, breakout, config, feishu, gsc, new_sites, notify, pains, report, review, revenue, seller_history, sellers, sitemaps, sources, store, usecases
 from .i18n import t
 from .diagnostics import configure, log, result
 
-SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "revenue", "asks", "gsc", "review", "judge", "usecases", "tutorials"}
+SKIPPABLE = {"x", "hf", "breakout", "sitemaps", "newsites", "revenue", "asks", "sellers", "gsc", "review", "judge", "usecases", "tutorials"}
 
 
 def run(fn, skip: bool = False, label: str = "step", reason: str = "--skip") -> dict:
@@ -114,6 +117,8 @@ def cmd_daily(args, cfg: dict, state: Path) -> int:
             args.revenue or date.today().weekday() == cfg["revenue"]["weekday"]), "营收产品"),
         "ask": run(lambda: asks.asks(cfg, state), "asks" in args.skip or not (
             args.asks or date.today().weekday() == cfg["asks"]["weekday"]), "Reddit 需求"),
+        "seller": run(lambda: sellers.sellers(cfg, state), "sellers" in args.skip or not (
+            args.sellers or date.today().weekday() == cfg["sellers"]["weekday"]), "新收款站点"),
     }
     found = run(lambda: gsc.gsc_new(cfg), "gsc" in args.skip, "Search Console")
     lead, judged = _leads(cfg, blocks)
@@ -179,6 +184,23 @@ def cmd_pains(args, cfg: dict) -> int:
     return 0
 
 
+def cmd_history(args, cfg: dict, state: Path) -> int:
+    step = (args.names or ["report"])[0]
+    db = seller_history.connect(state)
+    if step == "pull":
+        result = seller_history.pull(db, args.platform or cfg["sellers"]["platforms"], int((args.max_usd or 20) * 1e6))
+    elif step == "read":
+        result = seller_history.read(db, args.workers)
+    elif step == "sort":
+        result = seller_history.sort(db, cfg["sellers"]["model"], int((args.max_usd or 30) * 1e6))
+    elif step == "report":
+        result = seller_history.summary(db, Path(args.out) if args.out else None)
+    else:
+        raise SystemExit("history: pull, read, sort or report")
+    print(json.dumps(result, ensure_ascii=False, indent=1) if args.json else seller_history.text(result))
+    return 0
+
+
 def cmd_leads(args, state: Path) -> int:
     data = kept_leads(state, args.days)
     if args.json:
@@ -210,8 +232,8 @@ def main(argv: list[str] | None = None) -> int:
         return serve_mcp()
     prog = "python -m radar" if __package__ == "radar" else "new-term-radar"  # installed, the package has another name
     p = argparse.ArgumentParser(prog=prog, description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("command", choices=["daily", "sources", "keywords", "leads", "pains"])
-    p.add_argument("names", nargs="*", help="for `keywords`: the names to read")
+    p.add_argument("command", choices=["daily", "sources", "keywords", "leads", "pains", "history"])
+    p.add_argument("names", nargs="*", help="for `keywords`: the names to read; for `history`: pull, read, sort or report")
     p.add_argument("--repo", action="append", default=[], metavar="NAME=OWNER/REPO", help="for `keywords`: a name's GitHub repository")
     p.add_argument("--days", type=int, default=7, help="for `leads`: how far back")
     p.add_argument("--json", action="store_true", help="for `keywords` and `leads`: print JSON")
@@ -222,10 +244,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--new-sites", action="store_true", help="run the weekly new-site signal today")
     p.add_argument("--revenue", action="store_true", help="run the weekly revenue signal today (needs TRUSTMRR_API_KEY)")
     p.add_argument("--asks", action="store_true", help="run the weekly Reddit asks signal today")
+    p.add_argument("--sellers", action="store_true", help="run the weekly new-sellers signal today")
     p.add_argument("--extension", action="append", default=[], metavar="ID", help="for `pains`: a Chrome extension to read the reviews of")
     p.add_argument("--mail", action="store_true", help="mail the report (see radar/notify.py)")
     p.add_argument("--verbose", action="store_true", help="print execution details to stderr")
     p.add_argument("--log-file", help="also save execution details as UTF-8 text (append)")
+    p.add_argument("--platform", action="append", choices=sorted(sellers.PLATFORMS), help="for `history pull`: one platform (default: all)")
+    p.add_argument("--max-usd", type=float, help="for `history pull` (default 20) and `history sort` (default 30): stop at this spend")
+    p.add_argument("--workers", type=int, default=32, help="for `history read`: home pages fetched at a time")
     args = p.parse_args(argv)
     args.skip = {s for s in args.skip.split(",") if s}
     unknown = args.skip - SKIPPABLE
@@ -249,6 +275,8 @@ def main(argv: list[str] | None = None) -> int:
             code = cmd_keywords(args, cfg, state)
         elif args.command == "pains":
             code = cmd_pains(args, cfg)
+        elif args.command == "history":
+            code = cmd_history(args, cfg, state)
         else:
             code = cmd_sources(args, cfg, state) if args.command == "sources" else cmd_daily(args, cfg, state)
     log.info("[结束] exit=%d，总耗时 %.2fs；单个信号的失败见上述日志及报告状态。", code, time.monotonic() - started)
