@@ -371,7 +371,7 @@ to send only one connection test. See [the Feishu guide (Chinese)](docs/FEISHU.z
 
 See the [2026-10-15 update notes (Chinese)](docs/CHANGES-2026-10-15.zh-CN.md) for the 0.4.0 sync and verified schedule/notification results.
 
-The [2026-10-21 update notes (Chinese)](docs/CHANGES-2026-10-21.zh-CN.md) cover the 0.5.0 sync and the distinction between API acceptance and visibility in the intended Feishu group. The new sellers signal remains disabled in free scheduled runs.
+The [2026-10-21 update notes (Chinese)](docs/CHANGES-2026-10-21.zh-CN.md) cover the 0.5.0 sync and user-confirmed visibility of real reports in the intended Feishu group. The new sellers signal remains disabled in free scheduled runs.
 
 ## How the pieces decide
 
