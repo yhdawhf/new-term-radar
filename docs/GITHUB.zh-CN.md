@@ -74,6 +74,10 @@ sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历�
 
 本次作者只有 MCP 依赖固定和 README 更新，版本仍是 0.5.0；定时流程从 main 读取同步后的代码，继续保留免费模式和历史状态。详见[本次修改说明](CHANGES-2026-10-23.zh-CN.md)。
 
+更新后[手动验证日报](https://github.com/yhdawhf/new-term-radar/actions/runs/39884383101)于 09:30:38 开始，09:31:40 飞书 API 接受 17 个候选词（3 条消息），待发为 0，运行成功；累计去重词为 223。此轮事件为 workflow_dispatch，自动定时是否运行仍单独通过 schedule 事件记录判断。
+
+用户已确认这批 3 条报告在目标群可见，当前链路核对完成。Webhook、现有快照及已发送历史均未重置。
+
 ## 以后开启 AIsa
 
 1. 在仓库 Settings > Secrets and variables > Actions 添加 Secret `AISA_API_KEY`。
