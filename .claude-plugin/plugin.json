@@ -20,7 +20,7 @@
       "command": "uvx",
       "args": [
         "--with",
-        "mcp",
+        "mcp==2.3.0",
         "new-term-radar==0.5.0",
         "mcp"
       ],

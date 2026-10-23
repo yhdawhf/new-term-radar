@@ -373,6 +373,8 @@ See the [2026-10-15 update notes (Chinese)](docs/CHANGES-2026-10-15.zh-CN.md) fo
 
 The [2026-10-21 update notes (Chinese)](docs/CHANGES-2026-10-21.zh-CN.md) cover the 0.5.0 sync and user-confirmed visibility of real reports in the intended Feishu group. The new sellers signal remains disabled in free scheduled runs.
 
+See the [2026-10-23 update notes (Chinese)](docs/CHANGES-2026-10-23.zh-CN.md) for the upstream MCP pin and current scheduled-run/delivery evidence.
+
 ## How the pieces decide
 
 - **Names in posts** (`radar/terms.py`): capitalised words, words with a digit (`Qwen3.8`) or inner capitals (`HyperFrames`); a number after a name joins it (`Opus 5.5`). A name two accounts used counts; a name one account used needs 100 likes and must be unmistakably a name, since a capitalised word is often just the start of a sentence.
@@ -403,6 +405,7 @@ The tests cover the logic (name extraction, scoring, the store, the reports) and
 
 ## Thanks
 
+- Thanks to [哥飞 @gefei55](https://x.com/gefei55) for the groundwork: the radar is built on what he lays out in his WeChat articles and on his way of looking for signals on social media first, together with how I find sources from running my own social media accounts.
 - [子木 @CoderJeffLee](https://x.com/CoderJeffLee) for the idea behind the keyword table: a new name and the generic terms downstream of it belong in one table, each with a decision.
 - [饭特稀 | Fentix @fantexi997](https://x.com/fantexi997) for [GoAnyAPI](https://goanyapi.com), the optional source of related queries and one-country Trends series.
 

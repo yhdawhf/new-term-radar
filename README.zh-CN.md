@@ -356,6 +356,8 @@ npx skills add zhuyansen/new-term-radar
 
 最新作者 0.5.0 同步及飞书真实报告在目标群可见的验证结果，见 [2026-10-21 修改说明](docs/CHANGES-2026-10-21.zh-CN.md)。免费定时任务继续关闭需要 Key 的功能，包括新增的 sellers。
 
+10 月 23 日的作者依赖固定、自动执行记录和最新推送核查见 [2026-10-23 修改说明](docs/CHANGES-2026-10-23.zh-CN.md)。
+
 ## 各部分怎么判断
 
 - **帖子里的名字**（`radar/terms.py`）：首字母大写的词、带数字的词（`Qwen3.8`）、中间有大写的词（`HyperFrames`）；名字后面的数字会并进去（`Opus 5.5`）。两个账号都用过的名字算数；只有一个账号用的，需要 100 个赞，而且必须明显是名字，因为首字母大写的词常常只是句子开头。
@@ -386,6 +388,7 @@ python -m pytest -q tests
 
 ## 致谢
 
+- 感谢[哥飞 @gefei55](https://x.com/gefei55) 奠定的基础：雷达的构建基于他在微信文章中阐述的内容，以及他首先在社交媒体上寻找信号的方法，加上做自己本身自媒体的信源寻找思路做的。
 - [子木 @CoderJeffLee](https://x.com/CoderJeffLee)：新词表的想法来自他的建议，新名字和它下游的通用词应该放在同一张表里，每行给出决策。
 - [饭特稀 | Fentix @fantexi997](https://x.com/fantexi997)：[GoAnyAPI](https://goanyapi.com)，相关查询和单个国家 Trends 走势这个可选数据源。
 
