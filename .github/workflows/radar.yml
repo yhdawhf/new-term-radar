@@ -119,13 +119,13 @@ jobs:
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
         shell: bash
         run: |
-          # Keep new-site queries off until the upstream parameter issue is verified.
+          # New-site queries require AIsa; keep them off in this free deployment.
           skip=(newsites)
           if [[ "$PAID_ENABLED" != "true" || -z "$AISA_API_KEY" ]]; then
-            skip+=(x judge review usecases revenue asks tutorials sellers)
+            skip+=(x judge review usecases revenue asks tutorials sellers builders money sidelights)
             # Also prevent optional keys from activating any paid integration.
             unset AISA_API_KEY GOANYAPI_API_KEY TRUSTMRR_API_KEY
-            echo "运行模式：免费信号（Hugging Face 模型/Spaces、GitHub、sitemap）"
+            echo "运行模式：免费信号（Hugging Face 模型/Spaces、GitHub、sitemap、免费新品来源）"
           else
             echo "运行模式：已启用 AIsa 付费功能"
           fi

@@ -66,5 +66,14 @@
     "after_days": 14,
     "per_day": 5
   },
-  "gsc": {}
+  "gsc": {},
+  "feeds": {
+    "enabled": [
+      "producthunt",
+      "hn",
+      "openrouter",
+      "appstore",
+      "awesome"
+    ]
+  }
 }

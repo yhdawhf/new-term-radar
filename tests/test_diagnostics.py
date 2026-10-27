@@ -1,5 +1,6 @@
 """Check observable CLI behavior, failure visibility and log/report separation."""
 import json
+from pathlib import Path
 
 from radar import __main__ as cli
 from radar.diagnostics import configure
@@ -32,7 +33,7 @@ def test_signal_failure_is_logged_and_later_stage_can_run(tmp_path):
         def down():
             raise OSError("network unavailable")
         assert "error" in cli.run(down, label="HF")
-        assert cli.run(lambda: {"recorded": 1}, label="SQLite") == {"recorded": 1}
+        assert cli.run(lambda: {"recorded": 1}, label="SQLite")["recorded"] == 1
         text = trace.read_text()
         assert "[HF] 失败" in text and "network unavailable" in text and "[SQLite] 完成" in text
     finally:
@@ -76,7 +77,7 @@ def test_daily_keywords_keep_recent_names_report_storage_and_logs(tmp_path, monk
         assert "**local ai model**" in out.read_text()
         with cli.store.connect(state) as conn:
             assert conn.execute("SELECT signals FROM leads WHERE term = ?", ("local ai model",)).fetchone() == ('["usecase"]',)
-        assert "[关键词 SQLite 入库] 完成 {'recorded': 1}" in trace.read_text()
+        assert "[关键词 SQLite 入库] 完成 {'recorded': 1," in trace.read_text()
     finally:
         configure(False)
 
@@ -93,6 +94,10 @@ def test_free_daily_skips_new_paid_features_even_with_keys_and_forced_weekly_fla
     monkeypatch.setattr(cli.asks, "asks", paid_call)
     monkeypatch.setattr(cli.revenue, "products", paid_call)
     monkeypatch.setattr(cli.sellers, "sellers", paid_call)
+    monkeypatch.setattr(cli.sellers, "builders", paid_call)
+    monkeypatch.setattr(cli.money, "money", paid_call)
+    monkeypatch.setattr(cli.sidelights, "evidence", paid_call)
+    monkeypatch.setattr(cli.sidelights, "tails", paid_call)
     monkeypatch.setattr(cli.pains, "tutorial_asks", paid_call)
     monkeypatch.setattr(cli.usecases, "run", paid_call)
     cfg, out, trace = tmp_path / "config.json", tmp_path / "report.md", tmp_path / "run.log"
@@ -100,11 +105,26 @@ def test_free_daily_skips_new_paid_features_even_with_keys_and_forced_weekly_fla
     try:
         assert cli.main(["daily", "--config", str(cfg), "--state", str(tmp_path / "state"),
                          "--out", str(out), "--log-file", str(trace), "--asks", "--revenue", "--sellers", "--skip",
-                         "x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases,revenue,asks,tutorials,sellers"]) == 0
+                         "x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases,revenue,asks,tutorials,sellers,builders,money,sidelights"]) == 0
         assert called == []
         data = json.loads(out.with_suffix(".json").read_text())
         assert data["ask"]["skipped"] and data["revenue"]["skipped"] and data["keywords"]["skipped"]
-        assert data["seller"]["skipped"]
+        assert data["seller"]["skipped"] and data["builder"]["skipped"] and data["money"]["skipped"]
         assert "[教程需求] 跳过" in trace.read_text()
     finally:
         configure(False)
+
+
+def test_cloud_free_feeds_never_call_paid_providers(tmp_path, monkeypatch):
+    """Exercise the committed cloud config with weekly feeds forced on, without real network calls."""
+    root = Path(__file__).resolve().parents[1]
+    called = []
+    for name in cli.feeds.FEEDS:
+        def feed(cfg, name=name):
+            called.append(name)
+            return [], 0
+        monkeypatch.setitem(cli.feeds.FEEDS, name, feed)
+    assert cli.main(["daily", "--config", str(root / "config.github.json"),
+                     "--state", str(tmp_path), "--feeds", "--skip",
+                     "x,hf,breakout,sitemaps,newsites,gsc,review,judge,usecases,revenue,asks,tutorials,sellers,builders,money,sidelights"]) == 0
+    assert set(called) == {"producthunt", "hn", "openrouter", "appstore", "awesome"}

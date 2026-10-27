@@ -84,8 +84,12 @@ sources 和 daily 共享串行任务组与状态缓存，避免同时覆盖历�
 2. 将工作流中的 `PAID_ENABLED: "false"` 改为 `PAID_ENABLED: "true"` 并提交。单独添加 Key 不会开启付费请求。
 3. 按需要再配置可选的 `GOANYAPI_API_KEY`。Search Console 还需要 `GSC_TOKEN_JSON` 和云端配置中的 `gsc.site`。
 
-启用后，sources 才读取 X 并判断名字，daily 才运行关键词表和到期的 Trends 复盘。新站查询仍显式跳过，需验证上游接口后再恢复。付费请求按平台实际用量计费。
+启用后，sources 才读取 X 并判断名字，daily 才运行关键词表和到期的 Trends 复盘。作者 0.6.0 已修复新站接口，但本免费部署仍显式跳过；启用时需单独移除 newsites 跳过项。新增 feeds 目前仅白名单启用免费来源，付费来源需要另行配置。付费请求按平台实际用量计费。
 
 ## 暂停
 
 Actions > New-term radar > 右上角菜单 > Disable workflow。恢复时选择 Enable workflow。现有配置不依赖 `RADAR_ENABLED` 仓库变量。
+
+## 2026-10-27 同步
+
+已同步作者 0.6.0，并保留飞书、免费运行、中文日志及状态。新增免费 feeds 白名单；builders、money、sidelights 仍在免费模式跳过。今天自动日报实际 14:36 开始，14:37 向飞书 API 提交 20 个词（3 条消息），用户已确认在目标群可见；21:53 的自动 sources 又提交 2 个词。正式计划时间不变，实际存在明显延迟。详见[本次修改说明](CHANGES-2026-10-27.zh-CN.md)。
