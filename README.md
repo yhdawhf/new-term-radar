@@ -485,6 +485,8 @@ python -m pytest -q tests
 
 The tests cover the logic (name extraction, scoring, the store, the reports) and call no network.
 
+This fork synced upstream **0.6.0** on 2026-10-27. Free scheduled runs include Product Hunt, Show HN, OpenRouter, App Store and awesome lists. See the [update and Feishu verification notes (Chinese)](docs/CHANGES-2026-10-27.zh-CN.md).
+
 ## Thanks
 
 - Thanks to [哥飞 @gefei55](https://x.com/gefei55) for the groundwork: the radar is built on what he lays out in his WeChat articles and on his way of looking for signals on social media first, together with how I find sources from running my own social media accounts.
@@ -502,5 +504,3 @@ The diagram is drawn by `docs/make_diagram.py` (needs `rsvg-convert` and `ffmpeg
 MIT. Extracted from the radar that runs daily behind [agentskillshub.top](https://agentskillshub.top).
 
 <!-- mcp-name: io.github.zhuyansen/new-term-radar -->
-
-This fork synced upstream **0.6.0** on 2026-10-27. Free scheduled runs include Product Hunt, Show HN, OpenRouter, App Store and awesome lists. See the [update and Feishu verification notes (Chinese)](docs/CHANGES-2026-10-27.zh-CN.md).

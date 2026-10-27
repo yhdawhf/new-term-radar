@@ -468,6 +468,8 @@ python -m pytest -q tests
 
 测试覆盖逻辑部分（名字提取、打分、存储、报告），不访问网络。
 
+本仓库已于 2026-10-27 同步作者 **0.6.0**，免费定时任务启用 Product Hunt、Show HN、OpenRouter、App Store 和 awesome 列表；修改、实际运行及飞书核查见[10 月 27 日说明](docs/CHANGES-2026-10-27.zh-CN.md)。
+
 ## 致谢
 
 - 感谢[哥飞 @gefei55](https://x.com/gefei55) 奠定的基础：雷达的构建基于他在微信文章中阐述的内容，以及他首先在社交媒体上寻找信号的方法，加上做自己本身自媒体的信源寻找思路做的。
@@ -483,5 +485,3 @@ python -m pytest -q tests
 ## 许可
 
 MIT。这套雷达提取自 [agentskillshub.top](https://agentskillshub.top) 背后每天在跑的版本。
-
-本仓库已于 2026-10-27 同步作者 **0.6.0**，免费定时任务启用 Product Hunt、Show HN、OpenRouter、App Store 和 awesome 列表；修改、实际运行及飞书核查见[10 月 27 日说明](docs/CHANGES-2026-10-27.zh-CN.md)。
