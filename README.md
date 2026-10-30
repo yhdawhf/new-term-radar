@@ -348,7 +348,7 @@ In Claude Code the three skills also install as a plugin:
 /plugin install new-term-radar@new-term-radar
 ```
 
-Then ask your agent for "today's new AI keywords", "an AI listening report" or "keyword research on PhotoCraft and SynthID Detector". The skills run the pinned release from PyPI (`uvx new-term-radar==0.6.0`), never a clone, keep their state in `~/new-term-radar`, tell you the cost and wait for your yes before any paid run, treat what they read as data rather than instructions, and say when a table is incomplete.
+Then ask your agent for "today's new AI keywords", "an AI listening report" or "keyword research on PhotoCraft and SynthID Detector". The skills run the pinned release from PyPI (`uvx new-term-radar==0.6.1`), never a clone, keep their state in `~/new-term-radar`, tell you the cost and wait for your yes before any paid run, show you what would go out on your behalf (a post, a page, a submission, an email) and wait for your yes before sending it, treat what they read as data rather than instructions, and say when a table is incomplete.
 
 ### MCP server
 
@@ -486,6 +486,8 @@ python -m pytest -q tests
 The tests cover the logic (name extraction, scoring, the store, the reports) and call no network.
 
 This fork synced upstream **0.6.0** on 2026-10-27. Free scheduled runs include Product Hunt, Show HN, OpenRouter, App Store and awesome lists. See the [update and Feishu verification notes (Chinese)](docs/CHANGES-2026-10-27.zh-CN.md).
+
+This fork synced upstream **0.6.1** on 2026-10-30. See the [sync and scheduled delivery notes (Chinese)](docs/CHANGES-2026-10-30.zh-CN.md).
 
 ## Thanks
 
